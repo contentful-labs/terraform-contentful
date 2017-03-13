@@ -2,10 +2,11 @@ package main
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/terraform"
 )
 
 // Provider does shit
-func Provider() *schema.Provider {
+func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"cma_token": &schema.Schema{
