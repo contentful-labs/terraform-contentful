@@ -15,10 +15,15 @@ func TestAccContentfulSpace_Basic(t *testing.T) {
 		Providers:    testAccProviders,
 		CheckDestroy: testAccCheckContentfulSpaceDestroy,
 		Steps: []resource.TestStep{
-			{
-				Config: testAccCheckContentfulSpaceConfig,
+			resource.TestStep{
+				Config: testAccContentfulSpaceConfig,
 				Check: resource.TestCheckResourceAttr(
-					"contentful_space.myspace", "name", "terraform test"),
+					"contentful_space.myspace", "name", "space-name"),
+			},
+			resource.TestStep{
+				Config: testAccContentfulSpaceUpdateConfig,
+				Check: resource.TestCheckResourceAttr(
+					"contentful_space.myspace", "name", "changed-space-name"),
 			},
 		},
 	})
@@ -26,33 +31,30 @@ func TestAccContentfulSpace_Basic(t *testing.T) {
 
 func testAccCheckContentfulSpaceDestroy(s *terraform.State) error {
 	configMap := testAccProvider.Meta().(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "contentful_space" {
 			continue
 		}
 
-		client := configMap["client"].(*contentful.Contentful)
-		_, err := client.GetSpace(rs.Primary.ID)
+		space, err := client.GetSpace(rs.Primary.ID)
 		if err == nil {
-			return fmt.Errorf("Space %s still exists after destroy", rs.Primary.ID)
-		}
-
-		switch t := err.(type) {
-		case contentful.NotFoundError:
-			return nil
-		default:
-			_ = t
-			return fmt.Errorf("Error checking space %s: %s", rs.Primary.ID, err)
+			return fmt.Errorf("Space %s still exists after destroy", space.ID())
 		}
 	}
 
 	return nil
 }
 
-var testAccCheckContentfulSpaceConfig = `
+var testAccContentfulSpaceConfig = `
 resource "contentful_space" "myspace" {
-  name = "terraform test"
+  name = "space-name"
 }
+`
 
+var testAccContentfulSpaceUpdateConfig = `
+resource "contentful_space" "myspace" {
+  name = "changed-space-name"
+}
 `
