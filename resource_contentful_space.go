@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
-	"log"
+	contentful "github.com/tolgaakyuz/contentful.go"
 )
 
 func resourceContentfulSpace() *schema.Resource {
@@ -35,83 +35,90 @@ func resourceContentfulSpace() *schema.Resource {
 	}
 }
 
-func resourceSpaceCreate(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	name := d.Get("name").(string)
-	defaultLocale := d.Get("default_locale").(string)
+func resourceSpaceCreate(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
 
-	spacejson, err := createSpace(
-		configMap["cma_token"],
-		configMap["organization_id"],
-		name,
-		defaultLocale,
-	)
-
+	client := configMap["client"].(*contentful.Contentful)
+	space := client.NewSpace(configMap["organization_id"].(string))
+	space.Name = d.Get("name").(string)
+	space.DefaultLocale = d.Get("default_locale").(string)
+	err = space.Save()
 	if err != nil {
 		return err
 	}
 
-	err = updateSpaceProperties(d, spacejson)
+	err = updateSpaceProperties(d, space)
 	if err != nil {
 		return err
 	}
 
-	d.SetId(spacejson.Sys.ID)
+	d.SetId(space.Sys.ID)
+
 	return nil
 }
 
 func resourceSpaceRead(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	_, err := readSpace(configMap["cma_token"], d.Id())
+	configMap := m.(map[string]interface{})
 
-	log.Println("big problums", err == errorSpaceNotFound)
+	client := configMap["client"].(*contentful.Contentful)
+	_, err := client.GetSpace(d.Id())
 
-	if err == errorSpaceNotFound {
+	switch t := err.(type) {
+	case contentful.NotFoundError:
 		d.SetId("")
 		return nil
+	default:
+		_ = t
+		return err
 	}
+}
 
+func resourceSpaceUpdate(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
+
+	client := configMap["client"].(*contentful.Contentful)
+	space, err := client.GetSpace(d.Id())
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func resourceSpaceUpdate(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	spaceVersion := d.Get("version").(int)
-	newSpaceName := d.Get("name").(string)
-	log.Println("spaceVersion", spaceVersion)
-
-	spacejson, err := updateSpace(configMap["cma_token"], d.Id(), spaceVersion, newSpaceName)
-
+	space.Name = d.Get("name").(string)
+	// space.Sys.Version = d.Get("version").(int)
+	err = space.Save()
 	if err != nil {
 		return err
 	}
 
-	return updateSpaceProperties(d, spacejson)
+	return updateSpaceProperties(d, space)
 }
 
-func resourceSpaceDelete(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
+func resourceSpaceDelete(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
 
-	err := deleteSpace(configMap["cma_token"], d.Id())
+	client := configMap["client"].(*contentful.Contentful)
+	space, err := client.GetSpace(d.Id())
+	if err != nil {
+		return err
+	}
 
-	if err == errorSpaceNotFound {
+	err = space.Delete()
+
+	switch t := err.(type) {
+	case contentful.NotFoundError:
 		return nil
+	default:
+		_ = t
+		return err
 	}
-
-	return err
 }
 
-func updateSpaceProperties(d *schema.ResourceData, spacejson *spaceData) error {
-	err := d.Set("version", spacejson.Sys.Version)
+func updateSpaceProperties(d *schema.ResourceData, space *contentful.Space) error {
+	err := d.Set("version", space.Sys.Version)
 	if err != nil {
 		return err
 	}
 
-	err = d.Set("name", spacejson.Name)
+	err = d.Set("name", space.Name)
 	if err != nil {
 		return err
 	}

@@ -3,8 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/levigross/grequests"
 	"strconv"
+
+	"github.com/levigross/grequests"
 )
 
 type apiKeyProperties struct {
