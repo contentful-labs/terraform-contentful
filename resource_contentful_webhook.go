@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
+	contentful "github.com/tolgaakyuz/contentful.go"
 )
 
 func resourceContentfulWebhook() *schema.Resource {
@@ -59,165 +60,175 @@ func resourceContentfulWebhook() *schema.Resource {
 	}
 }
 
-func resourceCreateWebhook(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
+func resourceCreateWebhook(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
-	headers := transformHeadersToContentfulFormat(d.Get("headers"))
-	topics := transformTopicsToContentfulFormat(d.Get("topics"))
-
-	webhookprops := webhookProperties{
-		Name:              d.Get("name").(string),
-		URL:               d.Get("url").(string),
-		Topics:            topics,
-		Headers:           headers,
-		HTTPBasicUsername: d.Get("http_basic_auth_username").(string),
-		HTTPBasicPassword: d.Get("http_basic_auth_password").(string),
-	}
-
-	webhookjson, err := createWebhook(
-		cmaToken,
-		spaceID,
-		webhookprops,
-	)
+	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
 		return err
 	}
 
-	err = setWebhookProperties(d, webhookjson)
+	webhook := space.NewWebhook()
+	webhook.Name = d.Get("name").(string)
+	webhook.URL = d.Get("url").(string)
+	webhook.Topics = d.Get("topics").([]string)
+	webhook.Headers = transformHeadersToContentfulFormat(d.Get("headers"))
+	webhook.HTTPBasicUsername = d.Get("http_basic_auth_username").(string)
+	webhook.HTTPBasicPassword = d.Get("http_basic_auth_password").(string)
+
+	err = webhook.Save()
 	if err != nil {
 		return err
 	}
 
-	d.SetId(webhookjson.Sys.ID)
+	err = setWebhookProperties(d, webhook)
+	if err != nil {
+		return err
+	}
+
+	d.SetId(webhook.Sys.ID)
+
 	return nil
 }
 
-func resourceUpdateWebhook(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
-	webhookID := d.Id()
-	version := d.Get("version").(int)
+func resourceUpdateWebhook(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
-	headers := transformHeadersToContentfulFormat(d.Get("headers"))
-	topics := transformTopicsToContentfulFormat(d.Get("topics"))
-
-	webhookprops := webhookProperties{
-		Name:              d.Get("name").(string),
-		URL:               d.Get("url").(string),
-		Topics:            topics,
-		Headers:           headers,
-		HTTPBasicUsername: d.Get("http_basic_auth_username").(string),
-		HTTPBasicPassword: d.Get("http_basic_auth_password").(string),
-	}
-
-	wh, err := updateWebhook(cmaToken, spaceID, webhookID, version, webhookprops)
+	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
 		return err
 	}
 
-	err = setWebhookProperties(d, wh)
+	webhook, err := space.GetWebhook(d.Id())
 	if err != nil {
 		return err
 	}
 
-	d.SetId(wh.Sys.ID)
+	webhook.Name = d.Get("name").(string)
+	webhook.URL = d.Get("url").(string)
+	webhook.Topics = d.Get("topics").([]string)
+	webhook.Headers = transformHeadersToContentfulFormat(d.Get("headers"))
+	webhook.HTTPBasicUsername = d.Get("http_basic_auth_username").(string)
+	webhook.HTTPBasicPassword = d.Get("http_basic_auth_password").(string)
+
+	err = webhook.Save()
+	if err != nil {
+		return err
+	}
+
+	err = setWebhookProperties(d, webhook)
+	if err != nil {
+		return err
+	}
+
+	d.SetId(webhook.Sys.ID)
+
 	return nil
 }
 
 func resourceReadWebhook(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
-	webhookID := d.Id()
-	wh, err := readWebhook(cmaToken, spaceID, webhookID)
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
-	if err == errorWebhookNotFound {
+	space, err := client.GetSpace(d.Get("space_id").(string))
+	if err != nil {
+		return err
+	}
+
+	webhook, err := space.GetWebhook(d.Id())
+	if _, ok := err.(contentful.NotFoundError); ok {
 		d.SetId("")
 		return nil
 	}
 
-	return setWebhookProperties(d, wh)
+	if err != nil {
+		return err
+	}
+
+	return setWebhookProperties(d, webhook)
 }
 
-func resourceDeleteWebhook(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
-	webhookID := d.Id()
+func resourceDeleteWebhook(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
-	err := deleteWebhook(cmaToken, spaceID, webhookID)
+	space, err := client.GetSpace(d.Get("space_id").(string))
+	if err != nil {
+		return err
+	}
 
-	if err == errorSpaceNotFound {
+	webhook, err := space.GetWebhook(d.Id())
+	if err != nil {
+		return err
+	}
+
+	err = webhook.Delete()
+	if _, ok := err.(contentful.NotFoundError); ok {
 		return nil
 	}
 
 	return err
 }
 
-func setWebhookProperties(d *schema.ResourceData, webhookjson *webhookData) error {
+func setWebhookProperties(d *schema.ResourceData, webhook *contentful.Webhook) (err error) {
 	headers := make(map[string]string)
-	for _, entry := range webhookjson.Headers {
+	for _, entry := range webhook.Headers {
 		headers[entry.Key] = entry.Value
 	}
-	err := d.Set("headers", headers)
+
+	err = d.Set("headers", headers)
 	if err != nil {
 		return err
 	}
 
-	err = d.Set("space_id", webhookjson.Sys.Space.Sys.ID)
+	err = d.Set("space_id", webhook.Sys.Space.Sys.ID)
 	if err != nil {
 		return err
 	}
 
-	err = d.Set("version", webhookjson.Sys.Version)
+	err = d.Set("version", webhook.Sys.Version)
 	if err != nil {
 		return err
 	}
 
-	err = d.Set("name", webhookjson.Name)
+	err = d.Set("name", webhook.Name)
 	if err != nil {
 		return err
 	}
 
-	err = d.Set("url", webhookjson.URL)
+	err = d.Set("url", webhook.URL)
 	if err != nil {
 		return err
 	}
 
-	err = d.Set("http_basic_auth_username", webhookjson.HTTPBasicUsername)
+	err = d.Set("http_basic_auth_username", webhook.HTTPBasicUsername)
 	if err != nil {
 		return err
 	}
 
-	err = d.Set("http_basic_auth_password", webhookjson.HTTPBasicPassword)
+	err = d.Set("http_basic_auth_password", webhook.HTTPBasicPassword)
 	if err != nil {
 		return err
 	}
 
-	err = d.Set("topics", webhookjson.Topics)
+	err = d.Set("topics", webhook.Topics)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func transformHeadersToContentfulFormat(headersTerraform interface{}) []headerKeyValue {
-	headers := headersTerraform.(map[string]interface{})
-	headerList := []headerKeyValue{}
-	for k, v := range headers {
-		val := v.(string)
-		headerList = append(headerList, headerKeyValue{Key: k, Value: val})
-	}
-	return headerList
-}
+func transformHeadersToContentfulFormat(headersTerraform interface{}) []*contentful.WebhookHeader {
+	headers := []*contentful.WebhookHeader{}
 
-func transformTopicsToContentfulFormat(topicsTerraform interface{}) []string {
-	topicList := []string{}
-	for _, v := range topicsTerraform.([]interface{}) {
-		topicList = append(topicList, v.(string))
+	for k, v := range headersTerraform.(map[string]string) {
+		headers = append(headers, &contentful.WebhookHeader{
+			Key:   k,
+			Value: v,
+		})
 	}
-	return topicList
+
+	return headers
 }
