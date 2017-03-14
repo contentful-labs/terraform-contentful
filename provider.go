@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
+	contentful "github.com/tolgaakyuz/contentful.go"
 )
 
 // Provider does shit
@@ -33,9 +34,18 @@ func Provider() terraform.ResourceProvider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	config := map[string]string{
+	c, err := contentful.New(&contentful.Settings{
+		CMAToken: d.Get("cma_token").(string),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	config := map[string]interface{}{
 		"cma_token":       d.Get("cma_token").(string),
 		"organization_id": d.Get("organization_id").(string),
+		"client":          c,
 	}
+
 	return config, nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
+	contentful "github.com/tolgaakyuz/contentful.go"
 )
 
 func resourceContentfulAPIKey() *schema.Resource {
@@ -41,89 +42,113 @@ func resourceContentfulAPIKey() *schema.Resource {
 	}
 }
 
-func resourceCreateAPIKey(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
-	apiKeyName := d.Get("name").(string)
+func resourceCreateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
-	key, err := createAPIKey(cmaToken, spaceID, apiKeyName)
+	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
 		return err
 	}
 
-	if err := setAPIKeyProperties(d, key); err != nil {
+	apiKey := space.NewAPIKey()
+	apiKey.Name = d.Get("name").(string)
+	err = apiKey.Save()
+	if err != nil {
 		return err
 	}
 
-	d.SetId(key.Sys.ID)
+	if err := setAPIKeyProperties(d, apiKey); err != nil {
+		return err
+	}
+
+	d.SetId(apiKey.Sys.ID)
+
 	return nil
 }
 
-func resourceUpdateAPIKey(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
-	ID := d.Id()
-	version := d.Get("version").(int)
-	newAPIKeyName := d.Get("name").(string)
+func resourceUpdateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
-	key, err := updateAPIKey(cmaToken, spaceID, ID, version, newAPIKeyName)
+	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
 		return err
 	}
 
-	if err := setAPIKeyProperties(d, key); err != nil {
+	apiKey, err := space.GetAPIKey(d.Id())
+	if err != nil {
 		return err
 	}
 
-	d.SetId(key.Sys.ID)
+	apiKey.Name = d.Get("name").(string)
+	err = apiKey.Save()
+	if err != nil {
+		return err
+	}
+
+	if err := setAPIKeyProperties(d, apiKey); err != nil {
+		return err
+	}
+
+	d.SetId(apiKey.Sys.ID)
+
 	return nil
 }
 
-func resourceReadAPIKey(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
-	ID := d.Id()
+func resourceReadAPIKey(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
-	key, err := readAPIKey(cmaToken, spaceID, ID)
-
+	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
+		return err
+	}
+
+	apiKey, err := space.GetAPIKey(d.Id())
+	if _, ok := err.(contentful.NotFoundError); ok {
 		d.SetId("")
 		return nil
 	}
 
-	return setAPIKeyProperties(d, key)
+	return setAPIKeyProperties(d, apiKey)
 }
 
-func resourceDeleteAPIKey(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
-	ID := d.Id()
+func resourceDeleteAPIKey(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
-	return deleteAPIKey(cmaToken, spaceID, ID)
+	space, err := client.GetSpace(d.Get("space_id").(string))
+	if err != nil {
+		return err
+	}
+
+	apiKey, err := space.GetAPIKey(d.Id())
+	if err != nil {
+		return err
+	}
+
+	return apiKey.Delete()
 }
 
-func setAPIKeyProperties(d *schema.ResourceData, key *apiKeyData) error {
-	if err := d.Set("space_id", key.Sys.Space.Sys.ID); err != nil {
+func setAPIKeyProperties(d *schema.ResourceData, apiKey *contentful.APIKey) error {
+	if err := d.Set("space_id", apiKey.Sys.Space.Sys.ID); err != nil {
 		return err
 	}
 
-	if err := d.Set("version", key.Sys.Version); err != nil {
+	if err := d.Set("version", apiKey.Sys.Version); err != nil {
 		return err
 	}
 
-	if err := d.Set("name", key.Name); err != nil {
+	if err := d.Set("name", apiKey.Name); err != nil {
 		return err
 	}
 
-	if err := d.Set("delivery_api_key", key.AccessToken); err != nil {
+	if err := d.Set("delivery_api_key", apiKey.AccessToken); err != nil {
 		return err
 	}
 
-	if err := d.Set("preview_api_key", key.PreviewAPIKey.Sys.ID); err != nil {
+	if err := d.Set("preview_api_key", apiKey.PreviewAPIKey.Sys.ID); err != nil {
 		return err
 	}
 

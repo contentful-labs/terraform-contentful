@@ -1,12 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
+	contentful "github.com/tolgaakyuz/contentful.go"
 )
 
 func TestAccContentfulSpace_Basic(t *testing.T) {
@@ -25,47 +25,29 @@ func TestAccContentfulSpace_Basic(t *testing.T) {
 }
 
 func testAccCheckContentfulSpaceDestroy(s *terraform.State) error {
-	configMap := testAccProvider.Meta().(map[string]string)
+	configMap := testAccProvider.Meta().(map[string]interface{})
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "contentful_space" {
 			continue
 		}
 
-		exists, err := spaceExists(configMap["cma_token"], rs.Primary.ID)
-
-		if err != nil {
-			return fmt.Errorf("Error checking space %s: %s", rs.Primary.ID, err)
+		client := configMap["client"].(*contentful.Contentful)
+		_, err := client.GetSpace(rs.Primary.ID)
+		if err == nil {
+			return fmt.Errorf("Space %s still exists after destroy", rs.Primary.ID)
 		}
 
-		if exists {
-			return fmt.Errorf("Space %s still exists after destroy", rs.Primary.ID)
+		switch t := err.(type) {
+		case contentful.NotFoundError:
+			return nil
+		default:
+			_ = t
+			return fmt.Errorf("Error checking space %s: %s", rs.Primary.ID, err)
 		}
 	}
 
 	return nil
-}
-
-func testAccCheckContentfulSpaceExists(n string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("Resource not found: %s", n)
-		}
-
-		if rs.Primary.ID == "" {
-			return errors.New("No ID is set")
-		}
-
-		configMap := testAccProvider.Meta().(map[string]string)
-		_, err := spaceExists(configMap["cma_token"], rs.Primary.ID)
-
-		if err != nil {
-			return fmt.Errorf("Error checking space %s: %s", rs.Primary.ID, err)
-
-		}
-		return nil
-	}
 }
 
 var testAccCheckContentfulSpaceConfig = `

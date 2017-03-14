@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
+	contentful "github.com/tolgaakyuz/contentful.go"
 )
 
 func resourceContentfulLocale() *schema.Resource {
@@ -47,76 +48,82 @@ func resourceContentfulLocale() *schema.Resource {
 	}
 }
 
-func resourceCreateLocale(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
+func resourceCreateLocale(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
-	localeProps := localeProperties{
-		Name:         d.Get("name").(string),
-		Code:         d.Get("code").(string),
-		FallbackCode: d.Get("fallback_code").(string),
-		Optional:     d.Get("optional").(bool),
-	}
-
-	loc, err := createLocale(
-		cmaToken,
-		spaceID,
-		localeProps,
-	)
+	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
 		return err
 	}
 
-	err = setLocaleProperties(d, loc)
+	locale := space.NewLocale()
+	locale.Name = d.Get("name").(string)
+	locale.Code = d.Get("code").(string)
+	locale.FallbackCode = d.Get("fallback_code").(string)
+	locale.Optional = d.Get("optional").(bool)
+
+	err = locale.Save()
 	if err != nil {
 		return err
 	}
 
-	d.SetId(loc.Sys.ID)
+	err = setLocaleProperties(d, locale)
+	if err != nil {
+		return err
+	}
+
+	d.SetId(locale.Sys.ID)
+
 	return nil
 }
 
 func resourceReadLocale(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
-	localeID := d.Id()
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
-	loc, err := readLocale(cmaToken, spaceID, localeID)
-
-	if err == errorLocaleNotFound {
-		d.SetId("")
-		return nil
-	}
-
-	return setLocaleProperties(d, loc)
-}
-
-func resourceUpdateLocale(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
-	localeID := d.Id()
-
-	localeProps := localeProperties{
-		Name:         d.Get("name").(string),
-		Code:         d.Get("code").(string),
-		FallbackCode: d.Get("fallback_code").(string),
-		Optional:     d.Get("optional").(bool),
-	}
-
-	loc, err := updateLocale(
-		cmaToken,
-		spaceID,
-		localeID,
-		localeProps,
-	)
+	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
 		return err
 	}
 
-	err = setLocaleProperties(d, loc)
+	locale, err := space.GetLocale(d.Id())
+	if _, ok := err.(*contentful.NotFoundError); ok {
+		d.SetId("")
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return setLocaleProperties(d, locale)
+}
+
+func resourceUpdateLocale(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
+
+	space, err := client.GetSpace(d.Get("space_id").(string))
+	if err != nil {
+		return err
+	}
+
+	locale, err := space.GetLocale(d.Id())
+	if err != nil {
+		return err
+	}
+
+	locale.Name = d.Get("name").(string)
+	locale.Code = d.Get("code").(string)
+	locale.FallbackCode = d.Get("fallback_code").(string)
+	locale.Optional = d.Get("optional").(bool)
+	err = locale.Save()
+	if err != nil {
+		return err
+	}
+
+	err = setLocaleProperties(d, locale)
 	if err != nil {
 		return err
 	}
@@ -124,38 +131,49 @@ func resourceUpdateLocale(d *schema.ResourceData, m interface{}) error {
 	return nil
 }
 
-func resourceDeleteLocale(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]string)
-	cmaToken := configMap["cma_token"]
-	spaceID := d.Get("space_id").(string)
-	localeID := d.Id()
+func resourceDeleteLocale(d *schema.ResourceData, m interface{}) (err error) {
+	configMap := m.(map[string]interface{})
+	client := configMap["client"].(*contentful.Contentful)
 
-	err := deleteLocale(cmaToken, spaceID, localeID)
+	space, err := client.GetSpace(d.Get("space_id").(string))
+	if err != nil {
+		return err
+	}
 
-	if err == errorLocaleNotFound {
+	locale, err := space.GetLocale(d.Id())
+	if err != nil {
+		return err
+	}
+
+	err = locale.Delete()
+	if _, ok := err.(*contentful.NotFoundError); ok {
 		return nil
 	}
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func setLocaleProperties(d *schema.ResourceData, loc *locale) error {
-	err := d.Set("name", loc.Name)
+func setLocaleProperties(d *schema.ResourceData, locale *contentful.Locale) error {
+	err := d.Set("name", locale.Name)
 	if err != nil {
 		return err
 	}
 
-	err = d.Set("code", loc.Code)
+	err = d.Set("code", locale.Code)
 	if err != nil {
 		return err
 	}
 
-	err = d.Set("fallbackCode", loc.FallbackCode)
+	err = d.Set("fallbackCode", locale.FallbackCode)
 	if err != nil {
 		return err
 	}
 
-	err = d.Set("optional", loc.Optional)
+	err = d.Set("optional", locale.Optional)
 	if err != nil {
 		return err
 	}
