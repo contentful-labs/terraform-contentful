@@ -63,14 +63,12 @@ func resourceSpaceRead(d *schema.ResourceData, m interface{}) error {
 	client := configMap["client"].(*contentful.Contentful)
 	_, err := client.GetSpace(d.Id())
 
-	switch t := err.(type) {
-	case contentful.NotFoundError:
+	if _, ok := err.(contentful.NotFoundError); ok {
 		d.SetId("")
 		return nil
-	default:
-		_ = t
-		return err
 	}
+
+	return err
 }
 
 func resourceSpaceUpdate(d *schema.ResourceData, m interface{}) (err error) {
@@ -103,13 +101,11 @@ func resourceSpaceDelete(d *schema.ResourceData, m interface{}) (err error) {
 
 	err = space.Delete()
 
-	switch t := err.(type) {
-	case contentful.NotFoundError:
+	if _, ok := err.(contentful.NotFoundError); ok {
 		return nil
-	default:
-		_ = t
-		return err
 	}
+
+	return err
 }
 
 func updateSpaceProperties(d *schema.ResourceData, space *contentful.Space) error {
