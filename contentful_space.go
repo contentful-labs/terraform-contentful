@@ -3,8 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/levigross/grequests"
 	"strconv"
+
+	"github.com/levigross/grequests"
 )
 
 type collectionProperties struct {
@@ -72,7 +73,7 @@ func createSpace(
 	}
 
 	if res.StatusCode == 404 {
-		return nil, errorSpaceNotFound
+		return nil, errorOrganizationNotFound
 	}
 
 	if res.StatusCode != 201 {
@@ -207,6 +208,7 @@ func listSpaces(cmaToken string) ([]spaceData, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer res.Close()
 
 	if res.StatusCode == 401 {
 		return nil, errorUnauthorized
@@ -222,4 +224,35 @@ func listSpaces(cmaToken string) ([]spaceData, error) {
 	}
 
 	return spaceCol.Items, nil
+}
+
+func spaceExists(
+	cmaToken string,
+	spaceName string,
+) (bool, error) {
+	URL := baseURL + "/spaces/" + spaceName
+	res, err := grequests.Get(URL, &grequests.RequestOptions{
+		Headers: map[string]string{
+			"Authorization": fmt.Sprintf("Bearer %s", cmaToken),
+			"Content-Type":  contentfulContentType,
+		},
+	})
+	if err != nil {
+		return false, err
+	}
+	defer res.Close()
+
+	if res.StatusCode == 200 {
+		return true, nil
+	}
+
+	if res.StatusCode == 401 {
+		return false, errorUnauthorized
+	}
+
+	if res.StatusCode != 200 && res.StatusCode != 404 {
+		return false, errors.New(res.String())
+	}
+
+	return false, nil
 }
