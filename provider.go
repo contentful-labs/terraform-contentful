@@ -24,10 +24,11 @@ func Provider() terraform.ResourceProvider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"contentful_space":   resourceContentfulSpace(),
-			"contentful_apikey":  resourceContentfulAPIKey(),
-			"contentful_webhook": resourceContentfulWebhook(),
-			"contentful_locale":  resourceContentfulLocale(),
+			"contentful_space":       resourceContentfulSpace(),
+			"contentful_contenttype": resourceContentfulContentType(),
+			"contentful_apikey":      resourceContentfulAPIKey(),
+			"contentful_webhook":     resourceContentfulWebhook(),
+			"contentful_locale":      resourceContentfulLocale(),
 		},
 		ConfigureFunc: providerConfigure,
 	}
