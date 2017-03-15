@@ -37,13 +37,13 @@ func Provider() terraform.ResourceProvider {
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	c, err := contentful.New(&contentful.Settings{
 		CMAToken: d.Get("cma_token").(string),
-		BaseURL:  "https://api.contentful.com",
+		BaseURL:  "https://api.flinkly.com",
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	c.Debug = true
+	// c.Debug = true
 
 	config := map[string]interface{}{
 		"cma_token":       d.Get("cma_token").(string),
