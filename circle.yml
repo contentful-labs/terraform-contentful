@@ -1,0 +1,11 @@
+machine:
+  pre:
+    # Install docker 1.10.0, can be removed when circle ships it
+    # https://discuss.circleci.com/t/docker-1-10-0-is-available-beta/2100
+    - curl -sSL https://s3.amazonaws.com/circle-downloads/install-circleci-docker.sh | bash -s -- 1.10.0
+  services:
+    - docker
+
+test:
+  override:
+    - make test
