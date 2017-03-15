@@ -72,7 +72,7 @@ func resourceCreateWebhook(d *schema.ResourceData, m interface{}) (err error) {
 	webhook := space.NewWebhook()
 	webhook.Name = d.Get("name").(string)
 	webhook.URL = d.Get("url").(string)
-	webhook.Topics = d.Get("topics").([]string)
+	webhook.Topics = transformTopicsToContentfulFormat(d.Get("topics").([]interface{}))
 	webhook.Headers = transformHeadersToContentfulFormat(d.Get("headers"))
 	webhook.HTTPBasicUsername = d.Get("http_basic_auth_username").(string)
 	webhook.HTTPBasicPassword = d.Get("http_basic_auth_password").(string)
@@ -108,7 +108,7 @@ func resourceUpdateWebhook(d *schema.ResourceData, m interface{}) (err error) {
 
 	webhook.Name = d.Get("name").(string)
 	webhook.URL = d.Get("url").(string)
-	webhook.Topics = d.Get("topics").([]string)
+	webhook.Topics = transformTopicsToContentfulFormat(d.Get("topics").([]interface{}))
 	webhook.Headers = transformHeadersToContentfulFormat(d.Get("headers"))
 	webhook.HTTPBasicUsername = d.Get("http_basic_auth_username").(string)
 	webhook.HTTPBasicPassword = d.Get("http_basic_auth_password").(string)
@@ -223,12 +223,22 @@ func setWebhookProperties(d *schema.ResourceData, webhook *contentful.Webhook) (
 func transformHeadersToContentfulFormat(headersTerraform interface{}) []*contentful.WebhookHeader {
 	headers := []*contentful.WebhookHeader{}
 
-	for k, v := range headersTerraform.(map[string]string) {
+	for k, v := range headersTerraform.(map[string]interface{}) {
 		headers = append(headers, &contentful.WebhookHeader{
 			Key:   k,
-			Value: v,
+			Value: v.(string),
 		})
 	}
 
 	return headers
+}
+
+func transformTopicsToContentfulFormat(topicsTerraform []interface{}) []string {
+	var topics []string
+
+	for _, v := range topicsTerraform {
+		topics = append(topics, v.(string))
+	}
+
+	return topics
 }

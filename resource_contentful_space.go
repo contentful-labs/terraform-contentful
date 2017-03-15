@@ -81,7 +81,6 @@ func resourceSpaceUpdate(d *schema.ResourceData, m interface{}) (err error) {
 	}
 
 	space.Name = d.Get("name").(string)
-	// space.Sys.Version = d.Get("version").(int)
 	err = space.Save()
 	if err != nil {
 		return err
