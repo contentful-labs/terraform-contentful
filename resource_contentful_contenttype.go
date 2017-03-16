@@ -41,6 +41,7 @@ func resourceContentfulContentType() *schema.Resource {
 			"field": &schema.Schema{
 				Type:     schema.TypeSet,
 				Required: true,
+				MinItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": &schema.Schema{
@@ -80,8 +81,8 @@ func resourceContentfulContentType() *schema.Resource {
 
 func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error) {
 	configMap := m.(map[string]interface{})
-
 	client := configMap["client"].(*contentful.Contentful)
+
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
 		return err
