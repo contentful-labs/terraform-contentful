@@ -23,7 +23,7 @@ func TestAccContentfulContentType_Basic(t *testing.T) {
 			resource.TestStep{
 				Config: testAccContentfulContentTypeUpdateConfig,
 				Check: resource.TestCheckResourceAttr(
-					"contentful_space.myspace", "name", "changed-space-name"),
+					"contentful_contenttype.mycontenttype", "name", "Terraform name change"),
 			},
 		},
 	})
@@ -156,5 +156,11 @@ resource "contentful_contenttype" "mycontenttype" {
     required = false
   }
 
+  field {
+    id = "field3"
+    name = "Field 3"
+    type = "Text"
+    required = true
+  }
 }
 `
