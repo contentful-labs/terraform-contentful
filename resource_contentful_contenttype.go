@@ -34,7 +34,7 @@ func resourceContentfulContentType() *schema.Resource {
 				Type:     schema.TypeString,
 				Optional: true,
 			},
-			"displayField": &schema.Schema{
+			"display_field": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
 			},
@@ -62,11 +62,11 @@ func resourceContentfulContentType() *schema.Resource {
 							Optional: true,
 							Default:  true,
 						},
-						// "localized": &schema.Schema{
-						// 	Type:     schema.TypeBool,
-						// 	Optional: true,
-						// 	Default:  false,
-						// },
+						"localized": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
+						},
 						"disabled": &schema.Schema{
 							Type:     schema.TypeBool,
 							Optional: true,
@@ -90,17 +90,17 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 
 	ct := space.NewContentType()
 	ct.Name = d.Get("name").(string)
-	ct.DisplayField = d.Get("displayField").(string)
+	ct.DisplayField = d.Get("display_field").(string)
 	ct.Description = d.Get("description").(string)
 
 	for _, field := range d.Get("field").(*schema.Set).List() {
 		ct.Fields = append(ct.Fields, &contentful.Field{
-			ID:   field.(map[string]interface{})["id"].(string),
-			Name: field.(map[string]interface{})["name"].(string),
-			Type: field.(map[string]interface{})["type"].(string),
-			// Localized: field.(map[string]interface{})["localized"].(bool),
-			Required: field.(map[string]interface{})["required"].(bool),
-			Disabled: field.(map[string]interface{})["disabled"].(bool),
+			ID:        field.(map[string]interface{})["id"].(string),
+			Name:      field.(map[string]interface{})["name"].(string),
+			Type:      field.(map[string]interface{})["type"].(string),
+			Localized: field.(map[string]interface{})["localized"].(bool),
+			Required:  field.(map[string]interface{})["required"].(bool),
+			Disabled:  field.(map[string]interface{})["disabled"].(bool),
 		})
 	}
 
@@ -113,7 +113,7 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 		return err
 	}
 
-	if err = d.Set("version", ct.Sys.Version); err != nil {
+	if err = setContentTypeProperties(d, ct); err != nil {
 		return err
 	}
 
@@ -151,18 +151,18 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 	}
 
 	ct.Name = d.Get("name").(string)
-	ct.DisplayField = d.Get("displayField").(string)
+	ct.DisplayField = d.Get("display_field").(string)
 	ct.Description = d.Get("description").(string)
 
 	var fields []*contentful.Field
 	for _, field := range d.Get("field").(*schema.Set).List() {
 		fields = append(fields, &contentful.Field{
-			ID:   field.(map[string]interface{})["id"].(string),
-			Name: field.(map[string]interface{})["name"].(string),
-			Type: field.(map[string]interface{})["type"].(string),
-			// Localized: field.(map[string]interface{})["localized"].(bool),
-			Required: field.(map[string]interface{})["required"].(bool),
-			Disabled: field.(map[string]interface{})["disabled"].(bool),
+			ID:        field.(map[string]interface{})["id"].(string),
+			Name:      field.(map[string]interface{})["name"].(string),
+			Type:      field.(map[string]interface{})["type"].(string),
+			Localized: field.(map[string]interface{})["localized"].(bool),
+			Required:  field.(map[string]interface{})["required"].(bool),
+			Disabled:  field.(map[string]interface{})["disabled"].(bool),
 		})
 	}
 
@@ -177,11 +177,7 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 		return err
 	}
 
-	if err = setContentTypeProperties(d, ct); err != nil {
-		return err
-	}
-
-	return nil
+	return setContentTypeProperties(d, ct)
 }
 
 func resourceContentTypeDelete(d *schema.ResourceData, m interface{}) (err error) {
@@ -206,23 +202,8 @@ func resourceContentTypeDelete(d *schema.ResourceData, m interface{}) (err error
 }
 
 func setContentTypeProperties(d *schema.ResourceData, ct *contentful.ContentType) (err error) {
-	if err = d.Set("space_id", ct.Sys.Space.ID()); err != nil {
-		return err
-	}
 
 	if err = d.Set("version", ct.Sys.Version); err != nil {
-		return err
-	}
-
-	if err = d.Set("name", ct.Name); err != nil {
-		return err
-	}
-
-	if err = d.Set("description", ct.Description); err != nil {
-		return err
-	}
-
-	if err = d.Set("displayField", ct.DisplayField); err != nil {
 		return err
 	}
 
