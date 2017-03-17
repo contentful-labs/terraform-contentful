@@ -107,7 +107,6 @@ func testAccCheckContentfulWebhookAttributes(webhook *contentful.Webhook, attrs 
 }
 
 func testAccContentfulWebhookDestroy(s *terraform.State) error {
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "contentful_webhook" {
 			continue
@@ -129,8 +128,11 @@ func testAccContentfulWebhookDestroy(s *terraform.State) error {
 		client := configMap["client"].(*contentful.Contentful)
 
 		space, err := client.GetSpace(spaceID)
+		if _, ok := err.(contentful.NotFoundError); ok {
+			return nil
+		}
 		if err != nil {
-			return fmt.Errorf("No space with this id: %s", spaceID)
+			return err
 		}
 
 		_, err = space.GetWebhook(rs.Primary.ID)
