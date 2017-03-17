@@ -208,15 +208,11 @@ func setWebhookProperties(d *schema.ResourceData, webhook *contentful.Webhook) (
 		return err
 	}
 
-	err = d.Set("http_basic_auth_password", webhook.HTTPBasicPassword)
-	if err != nil {
-		return err
-	}
-
 	err = d.Set("topics", webhook.Topics)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

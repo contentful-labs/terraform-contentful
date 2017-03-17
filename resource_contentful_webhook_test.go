@@ -179,7 +179,11 @@ resource "contentful_webhook" "mywebhook" {
 
   name = "webhook-name-updated"
   url=  "https://www.example.com/test-updated"
-  topics = ["topic1", "topic2", "topic3"]
+  topics = [
+	"Entry.create",
+	"ContentType.create",
+	"Asset.*",
+  ]
   headers = {
 	header1 = "header1-value-updated"
     header2 = "header2-value-updated"
