@@ -6,4 +6,4 @@ COPY . /go/src/github.com/danihodovic/contentful-terraform
 
 RUN go get
 
-CMD go test
+CMD go test -v
