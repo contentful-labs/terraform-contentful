@@ -99,7 +99,6 @@ func resourceSpaceDelete(d *schema.ResourceData, m interface{}) (err error) {
 	}
 
 	err = space.Delete()
-
 	if _, ok := err.(contentful.NotFoundError); ok {
 		return nil
 	}

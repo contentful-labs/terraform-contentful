@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 	contentful "github.com/tolgaakyuz/contentful.go"
@@ -43,7 +45,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 		return nil, err
 	}
 
-	// c.Debug = true
+	if os.Getenv("TF_LOG") != "" {
+		c.Debug = true
+	}
 
 	config := map[string]interface{}{
 		"cma_token":       d.Get("cma_token").(string),
