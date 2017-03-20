@@ -37,23 +37,12 @@ func Provider() terraform.ResourceProvider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	c, err := contentful.New(&contentful.Settings{
-		CMAToken: d.Get("cma_token").(string),
-		BaseURL:  "https://api.flinkly.com",
-	})
-	if err != nil {
-		return nil, err
-	}
+	cma := contentful.NewCMA(d.Get("cma_token").(string))
+	cma.SetOrganization(d.Get("organization_id").(string))
 
 	if os.Getenv("TF_LOG") != "" {
-		c.Debug = true
+		cma.Debug = true
 	}
 
-	config := map[string]interface{}{
-		"cma_token":       d.Get("cma_token").(string),
-		"organization_id": d.Get("organization_id").(string),
-		"client":          c,
-	}
-
-	return config, nil
+	return cma, nil
 }

@@ -45,8 +45,7 @@ func testAccCheckContentfulContentTypeExists(n string, contentType *contentful.C
 			return fmt.Errorf("No space_id is set")
 		}
 
-		configMap := testAccProvider.Meta().(map[string]interface{})
-		client := configMap["client"].(*contentful.Contentful)
+		client := testAccProvider.Meta().(*contentful.Contentful)
 
 		space, err := client.GetSpace(spaceID)
 		if err != nil {
@@ -65,7 +64,6 @@ func testAccCheckContentfulContentTypeExists(n string, contentType *contentful.C
 }
 
 func testAccCheckContentfulContentTypeDestroy(s *terraform.State) (err error) {
-
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "contentful_contenttype" {
 			continue
@@ -76,8 +74,7 @@ func testAccCheckContentfulContentTypeDestroy(s *terraform.State) (err error) {
 			return fmt.Errorf("No space_id is set")
 		}
 
-		configMap := testAccProvider.Meta().(map[string]interface{})
-		client := configMap["client"].(*contentful.Contentful)
+		client := testAccProvider.Meta().(*contentful.Contentful)
 
 		space, err := client.GetSpace(spaceID)
 
@@ -110,7 +107,7 @@ resource "contentful_contenttype" "mycontenttype" {
 
   name = "Terraform"
   description = "Terraform Content Type"
-  displayField = "field1"
+  display_field = "field1"
 
   field {
     id = "field1"
@@ -125,7 +122,6 @@ resource "contentful_contenttype" "mycontenttype" {
     type = "Number"
     required = false
   }
-
 }
 `
 
@@ -140,7 +136,7 @@ resource "contentful_contenttype" "mycontenttype" {
 
   name = "Terraform name change"
   description = "Terraform Content Type"
-  displayField = "field1"
+  display_field = "field1"
 
   field {
     id = "field1"
