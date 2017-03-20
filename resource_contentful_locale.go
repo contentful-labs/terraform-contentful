@@ -49,8 +49,7 @@ func resourceContentfulLocale() *schema.Resource {
 }
 
 func resourceCreateLocale(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
-	client := configMap["client"].(*contentful.Contentful)
+	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
@@ -79,8 +78,7 @@ func resourceCreateLocale(d *schema.ResourceData, m interface{}) (err error) {
 }
 
 func resourceReadLocale(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]interface{})
-	client := configMap["client"].(*contentful.Contentful)
+	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
@@ -101,8 +99,7 @@ func resourceReadLocale(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceUpdateLocale(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
-	client := configMap["client"].(*contentful.Contentful)
+	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
@@ -132,8 +129,7 @@ func resourceUpdateLocale(d *schema.ResourceData, m interface{}) (err error) {
 }
 
 func resourceDeleteLocale(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
-	client := configMap["client"].(*contentful.Contentful)
+	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {

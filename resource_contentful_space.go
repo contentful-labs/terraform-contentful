@@ -36,10 +36,9 @@ func resourceContentfulSpace() *schema.Resource {
 }
 
 func resourceSpaceCreate(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
+	client := m.(*contentful.Contentful)
 
-	client := configMap["client"].(*contentful.Contentful)
-	space := client.NewSpace(configMap["organization_id"].(string))
+	space := client.NewSpace()
 	space.Name = d.Get("name").(string)
 	space.DefaultLocale = d.Get("default_locale").(string)
 	err = space.Save()
@@ -58,9 +57,8 @@ func resourceSpaceCreate(d *schema.ResourceData, m interface{}) (err error) {
 }
 
 func resourceSpaceRead(d *schema.ResourceData, m interface{}) error {
-	configMap := m.(map[string]interface{})
+	client := m.(*contentful.Contentful)
 
-	client := configMap["client"].(*contentful.Contentful)
 	_, err := client.GetSpace(d.Id())
 
 	if _, ok := err.(contentful.NotFoundError); ok {
@@ -72,9 +70,8 @@ func resourceSpaceRead(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceSpaceUpdate(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
+	client := m.(*contentful.Contentful)
 
-	client := configMap["client"].(*contentful.Contentful)
 	space, err := client.GetSpace(d.Id())
 	if err != nil {
 		return err
@@ -90,9 +87,8 @@ func resourceSpaceUpdate(d *schema.ResourceData, m interface{}) (err error) {
 }
 
 func resourceSpaceDelete(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
+	client := m.(*contentful.Contentful)
 
-	client := configMap["client"].(*contentful.Contentful)
 	space, err := client.GetSpace(d.Id())
 	if err != nil {
 		return err

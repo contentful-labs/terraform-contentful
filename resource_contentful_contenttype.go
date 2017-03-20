@@ -80,8 +80,7 @@ func resourceContentfulContentType() *schema.Resource {
 }
 
 func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
-	client := configMap["client"].(*contentful.Contentful)
+	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
@@ -123,9 +122,8 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 }
 
 func resourceContentTypeRead(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
+	client := m.(*contentful.Contentful)
 
-	client := configMap["client"].(*contentful.Contentful)
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
 		return err
@@ -137,9 +135,8 @@ func resourceContentTypeRead(d *schema.ResourceData, m interface{}) (err error) 
 }
 
 func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
+	client := m.(*contentful.Contentful)
 
-	client := configMap["client"].(*contentful.Contentful)
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
 		return err
@@ -181,9 +178,8 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 }
 
 func resourceContentTypeDelete(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
+	client := m.(*contentful.Contentful)
 
-	client := configMap["client"].(*contentful.Contentful)
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
 		return err

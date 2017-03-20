@@ -61,9 +61,8 @@ func testAccCheckContentfulWebhookExists(n string, webhook *contentful.Webhook) 
 			return fmt.Errorf("No webhook ID is set")
 		}
 
-		// read config map and get sdk client
-		configMap := testAccProvider.Meta().(map[string]interface{})
-		client := configMap["client"].(*contentful.Contentful)
+		// sdk client
+		client := testAccProvider.Meta().(*contentful.Contentful)
 
 		space, err := client.GetSpace(spaceID)
 		if err != nil {
@@ -123,9 +122,8 @@ func testAccContentfulWebhookDestroy(s *terraform.State) error {
 			return fmt.Errorf("No webhook ID is set")
 		}
 
-		// read config map and get sdk client
-		configMap := testAccProvider.Meta().(map[string]interface{})
-		client := configMap["client"].(*contentful.Contentful)
+		// sdk client
+		client := testAccProvider.Meta().(*contentful.Contentful)
 
 		space, err := client.GetSpace(spaceID)
 		if _, ok := err.(contentful.NotFoundError); ok {

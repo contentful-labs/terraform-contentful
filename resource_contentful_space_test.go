@@ -30,8 +30,7 @@ func TestAccContentfulSpace_Basic(t *testing.T) {
 }
 
 func testAccCheckContentfulSpaceDestroy(s *terraform.State) error {
-	configMap := testAccProvider.Meta().(map[string]interface{})
-	client := configMap["client"].(*contentful.Contentful)
+	client := testAccProvider.Meta().(*contentful.Contentful)
 
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "contentful_space" {

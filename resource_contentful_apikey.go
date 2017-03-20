@@ -43,8 +43,7 @@ func resourceContentfulAPIKey() *schema.Resource {
 }
 
 func resourceCreateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
-	client := configMap["client"].(*contentful.Contentful)
+	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
@@ -68,8 +67,7 @@ func resourceCreateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 }
 
 func resourceUpdateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
-	client := configMap["client"].(*contentful.Contentful)
+	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
@@ -97,8 +95,7 @@ func resourceUpdateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 }
 
 func resourceReadAPIKey(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
-	client := configMap["client"].(*contentful.Contentful)
+	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
@@ -115,8 +112,7 @@ func resourceReadAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 }
 
 func resourceDeleteAPIKey(d *schema.ResourceData, m interface{}) (err error) {
-	configMap := m.(map[string]interface{})
-	client := configMap["client"].(*contentful.Contentful)
+	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
 	if err != nil {
