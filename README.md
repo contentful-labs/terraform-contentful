@@ -21,9 +21,16 @@ Create, update and delete Contentful resources such as:
 
 # Getting started
 
+Download [go](https://golang.org/dl) for your platform.
+
+Follow the [Install the Go tools](https://golang.org/doc/install#install) instructions.
+
 Download [terraform](https://www.terraform.io/downloads.html) for your platform.
+
 Follow the [Installing Terraform](https://www.terraform.io/intro/getting-started/install.html) instructions.
-Create a directory where your terraform files and states will be placed. Although not mandatory this should be placed under a version control software such as git.
+
+Create a directory where your terraform files and states will be placed. Although not mandatory this should be placed under a version control software such as [git](https://git-scm.com).
+
 Make sure you have your Content Management API Token and the organization ID before starting. As an alternative to configuring the provider in the terraform file you can also set environment variables.
 
 ```sh
