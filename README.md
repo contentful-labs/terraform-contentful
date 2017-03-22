@@ -1,6 +1,5 @@
-[![Build Status](https://img.shields.io/circleci/project/github/danihodovic/contentful-terraform.svg?branch=master)](https://circleci.com/gh/danihodovic/contentful-terraform)
-[![semantic-release](https://img.shields.io/github/release/danihodovic/contentful-terraform.svg)](https://github.com/semantic-release/semantic-release)
-[![license](https://img.shields.io/github/license/danihodovic/contentful-terraform.svg)](https://github.com/danihodovic/contentful-terraform/blob/master/LICENSE)
+[![Build Status](https://img.shields.io/circleci/project/github/contentful-labs/terraform-contentful.svg?branch=master)](https://circleci.com/gh/contentful-labs/terraform-contentful)
+[![license](https://img.shields.io/github/license/contentful-labs/terraform-contentful.svg)](https://github.com/contentful-labs/terraform-contentful/blob/master/LICENSE)
 
 Terraform Provider for [Contentful's](https://www.contentful.com) Content Management API
 
@@ -133,17 +132,9 @@ To enable higher verbose mode
 ### Other references
 Julien Fabre: [Writing a Terraform provider](http://blog.jfabre.net/2017/01/22/writing-terraform-provider)
 
-## Versioning
-
-This project strictly follows [Semantic Versioning](http://semver.org/) by use of [semantic-release](https://github.com/semantic-release/semantic-release).
-
-This means that new versions are released automatically as fixes, features or breaking changes are released.
-
-You can check the changelog on the [releases](https://github.com/danihodovic/contentful-terraform/releases) page.
-
 ## Support
 
-If you have a problem with this provider, please file an [issue](https://github.com/danihodovic/contentful-terraform/issues/new) here on Github.
+If you have a problem with this provider, please file an [issue](https://github.com/contentful-labs/terraform-contentful/issues/new) here on Github.
 
 ## License
 
