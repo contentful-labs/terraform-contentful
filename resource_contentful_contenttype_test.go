@@ -140,21 +140,7 @@ resource "contentful_contenttype" "mycontenttype" {
 
   field {
     id = "field1"
-    name = "Field 1"
-    type = "Text"
-    required = true
-  }
-
-  field {
-    id = "field2"
-    name = "Field 2"
-    type = "Number"
-    required = false
-  }
-
-  field {
-    id = "field3"
-    name = "Field 3"
+    name = "New field name"
     type = "Text"
     required = true
   }

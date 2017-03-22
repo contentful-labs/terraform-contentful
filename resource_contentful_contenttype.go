@@ -72,6 +72,11 @@ func resourceContentfulContentType() *schema.Resource {
 							Optional: true,
 							Default:  false,
 						},
+						"omitted": &schema.Schema{
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
+						},
 					},
 				},
 			},
@@ -100,6 +105,7 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 			Localized: field.(map[string]interface{})["localized"].(bool),
 			Required:  field.(map[string]interface{})["required"].(bool),
 			Disabled:  field.(map[string]interface{})["disabled"].(bool),
+			Omitted:   field.(map[string]interface{})["omitted"].(bool),
 		})
 	}
 
@@ -135,6 +141,9 @@ func resourceContentTypeRead(d *schema.ResourceData, m interface{}) (err error) 
 }
 
 func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error) {
+	var existingFields []*contentful.Field
+	var deletedFields []*contentful.Field
+
 	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
@@ -151,19 +160,18 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 	ct.DisplayField = d.Get("display_field").(string)
 	ct.Description = d.Get("description").(string)
 
-	var fields []*contentful.Field
-	for _, field := range d.Get("field").(*schema.Set).List() {
-		fields = append(fields, &contentful.Field{
-			ID:        field.(map[string]interface{})["id"].(string),
-			Name:      field.(map[string]interface{})["name"].(string),
-			Type:      field.(map[string]interface{})["type"].(string),
-			Localized: field.(map[string]interface{})["localized"].(bool),
-			Required:  field.(map[string]interface{})["required"].(bool),
-			Disabled:  field.(map[string]interface{})["disabled"].(bool),
-		})
-	}
+	// Figure out if fields were removed
+	if d.HasChange("field") {
+		old, new := d.GetChange("field")
 
-	ct.Fields = fields
+		existingFields, deletedFields = checkFieldChanges(old.(*schema.Set), new.(*schema.Set))
+
+		ct.Fields = existingFields
+
+		if deletedFields != nil {
+			ct.Fields = append(ct.Fields, deletedFields...)
+		}
+	}
 
 	if err = ct.Save(); err != nil {
 		return err
@@ -172,6 +180,19 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 	if err = ct.Activate(); err != nil {
 		//@TODO Maybe delete the CT ?
 		return err
+	}
+
+	if deletedFields != nil {
+		ct.Fields = existingFields
+
+		if err = ct.Save(); err != nil {
+			return err
+		}
+
+		if err = ct.Activate(); err != nil {
+			//@TODO Maybe delete the CT ?
+			return err
+		}
 	}
 
 	return setContentTypeProperties(d, ct)
@@ -204,4 +225,48 @@ func setContentTypeProperties(d *schema.ResourceData, ct *contentful.ContentType
 	}
 
 	return nil
+}
+
+func checkFieldChanges(old, new *schema.Set) ([]*contentful.Field, []*contentful.Field) {
+	var existingFields []*contentful.Field
+	var deletedFields []*contentful.Field
+	var fieldRemoved bool
+
+	for _, oldField := range old.List() {
+		fieldRemoved = true
+		for _, newField := range new.List() {
+			if oldField.(map[string]interface{})["id"].(string) == newField.(map[string]interface{})["id"].(string) {
+				fieldRemoved = false
+				break
+			}
+		}
+
+		if fieldRemoved {
+			deletedFields = append(deletedFields,
+				&contentful.Field{
+					ID:        oldField.(map[string]interface{})["id"].(string),
+					Name:      oldField.(map[string]interface{})["name"].(string),
+					Type:      oldField.(map[string]interface{})["type"].(string),
+					Localized: oldField.(map[string]interface{})["localized"].(bool),
+					Required:  oldField.(map[string]interface{})["required"].(bool),
+					Disabled:  oldField.(map[string]interface{})["disabled"].(bool),
+					Omitted:   true,
+				})
+		}
+	}
+
+	for _, field := range new.List() {
+		existingFields = append(existingFields,
+			&contentful.Field{
+				ID:        field.(map[string]interface{})["id"].(string),
+				Name:      field.(map[string]interface{})["name"].(string),
+				Type:      field.(map[string]interface{})["type"].(string),
+				Localized: field.(map[string]interface{})["localized"].(bool),
+				Required:  field.(map[string]interface{})["required"].(bool),
+				Disabled:  field.(map[string]interface{})["disabled"].(bool),
+				Omitted:   field.(map[string]interface{})["omitted"].(bool),
+			})
+	}
+
+	return existingFields, deletedFields
 }
