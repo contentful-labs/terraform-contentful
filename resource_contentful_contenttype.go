@@ -57,6 +57,36 @@ func resourceContentfulContentType() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"items": &schema.Schema{
+							Type:     schema.TypeSet,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"type": &schema.Schema{
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"validations": &schema.Schema{
+										Type:     schema.TypeSet,
+										Optional: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"linkContentType": &schema.Schema{
+													Type:     schema.TypeList,
+													Optional: true,
+													Elem:     &schema.Schema{Type: schema.TypeString},
+												},
+											},
+										},
+									},
+									"link_type": &schema.Schema{
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
 						"required": &schema.Schema{
 							Type:     schema.TypeBool,
 							Optional: true,
@@ -85,6 +115,8 @@ func resourceContentfulContentType() *schema.Resource {
 }
 
 func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error) {
+	var items *contentful.FieldTypeArrayItem
+
 	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
@@ -98,10 +130,35 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 	ct.Description = d.Get("description").(string)
 
 	for _, field := range d.Get("field").(*schema.Set).List() {
+		for _, item := range field.(map[string]interface{})["items"].(*schema.Set).List() {
+			var validations []contentful.FieldValidation
+
+			for _, validationList := range item.(map[string]interface{})["validations"].(*schema.Set).List() {
+				for key, value := range validationList.(map[string]interface{}) {
+					if key == "linkContentType" {
+						var linkList []string
+						for _, linkContentType := range value.([]interface{}) {
+							linkList = append(linkList, linkContentType.(string))
+						}
+						validations = append(validations, contentful.FieldValidationLink{LinkContentType: linkList})
+					} else {
+						validations = nil
+					}
+				}
+			}
+
+			items = &contentful.FieldTypeArrayItem{
+				Type:        item.(map[string]interface{})["type"].(string),
+				Validations: validations,
+				LinkType:    item.(map[string]interface{})["link_type"].(string),
+			}
+		}
+
 		ct.Fields = append(ct.Fields, &contentful.Field{
 			ID:        field.(map[string]interface{})["id"].(string),
 			Name:      field.(map[string]interface{})["name"].(string),
 			Type:      field.(map[string]interface{})["type"].(string),
+			Items:     items,
 			Localized: field.(map[string]interface{})["localized"].(bool),
 			Required:  field.(map[string]interface{})["required"].(bool),
 			Disabled:  field.(map[string]interface{})["disabled"].(bool),
