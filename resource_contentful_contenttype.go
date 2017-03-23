@@ -90,7 +90,7 @@ func resourceContentfulContentType() *schema.Resource {
 						"required": &schema.Schema{
 							Type:     schema.TypeBool,
 							Optional: true,
-							Default:  true,
+							Default:  false,
 						},
 						"localized": &schema.Schema{
 							Type:     schema.TypeBool,
@@ -115,8 +115,6 @@ func resourceContentfulContentType() *schema.Resource {
 }
 
 func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error) {
-	var items *contentful.FieldTypeArrayItem
-
 	client := m.(*contentful.Contentful)
 
 	space, err := client.GetSpace(d.Get("space_id").(string))
@@ -129,8 +127,21 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 	ct.DisplayField = d.Get("display_field").(string)
 	ct.Description = d.Get("description").(string)
 
-	for _, field := range d.Get("field").(*schema.Set).List() {
-		for _, item := range field.(map[string]interface{})["items"].(*schema.Set).List() {
+	for _, rawField := range d.Get("field").(*schema.Set).List() {
+		field := rawField.(map[string]interface{})
+
+		contentfulField := &contentful.Field{
+			ID:        field["id"].(string),
+			Name:      field["name"].(string),
+			Type:      field["type"].(string),
+			Localized: field["localized"].(bool),
+			Required:  field["required"].(bool),
+			Disabled:  field["disabled"].(bool),
+			Omitted:   field["omitted"].(bool),
+		}
+
+		var items *contentful.FieldTypeArrayItem
+		for _, item := range field["items"].(*schema.Set).List() {
 			var validations []contentful.FieldValidation
 
 			for _, validationList := range item.(map[string]interface{})["validations"].(*schema.Set).List() {
@@ -141,8 +152,6 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 							linkList = append(linkList, linkContentType.(string))
 						}
 						validations = append(validations, contentful.FieldValidationLink{LinkContentType: linkList})
-					} else {
-						validations = nil
 					}
 				}
 			}
@@ -154,16 +163,11 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 			}
 		}
 
-		ct.Fields = append(ct.Fields, &contentful.Field{
-			ID:        field.(map[string]interface{})["id"].(string),
-			Name:      field.(map[string]interface{})["name"].(string),
-			Type:      field.(map[string]interface{})["type"].(string),
-			Items:     items,
-			Localized: field.(map[string]interface{})["localized"].(bool),
-			Required:  field.(map[string]interface{})["required"].(bool),
-			Disabled:  field.(map[string]interface{})["disabled"].(bool),
-			Omitted:   field.(map[string]interface{})["omitted"].(bool),
-		})
+		if items != nil {
+			contentfulField.Items = items
+		}
+
+		ct.Fields = append(ct.Fields, contentfulField)
 	}
 
 	if err = ct.Save(); err != nil {
