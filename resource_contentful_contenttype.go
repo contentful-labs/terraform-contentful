@@ -140,30 +140,7 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 			Omitted:   field["omitted"].(bool),
 		}
 
-		var items *contentful.FieldTypeArrayItem
-		for _, item := range field["items"].(*schema.Set).List() {
-			var validations []contentful.FieldValidation
-
-			for _, validationList := range item.(map[string]interface{})["validations"].(*schema.Set).List() {
-				for key, value := range validationList.(map[string]interface{}) {
-					if key == "linkContentType" {
-						var linkList []string
-						for _, linkContentType := range value.([]interface{}) {
-							linkList = append(linkList, linkContentType.(string))
-						}
-						validations = append(validations, contentful.FieldValidationLink{LinkContentType: linkList})
-					}
-				}
-			}
-
-			items = &contentful.FieldTypeArrayItem{
-				Type:        item.(map[string]interface{})["type"].(string),
-				Validations: validations,
-				LinkType:    item.(map[string]interface{})["link_type"].(string),
-			}
-		}
-
-		if items != nil {
+		if items := processItems(field["items"].(*schema.Set)); items != nil {
 			contentfulField.Items = items
 		}
 
@@ -289,6 +266,7 @@ func setContentTypeProperties(d *schema.ResourceData, ct *contentful.ContentType
 }
 
 func checkFieldChanges(old, new *schema.Set) ([]*contentful.Field, []*contentful.Field) {
+	var contentfulField *contentful.Field
 	var existingFields []*contentful.Field
 	var deletedFields []*contentful.Field
 	var fieldRemoved bool
@@ -317,17 +295,49 @@ func checkFieldChanges(old, new *schema.Set) ([]*contentful.Field, []*contentful
 	}
 
 	for _, field := range new.List() {
-		existingFields = append(existingFields,
-			&contentful.Field{
-				ID:        field.(map[string]interface{})["id"].(string),
-				Name:      field.(map[string]interface{})["name"].(string),
-				Type:      field.(map[string]interface{})["type"].(string),
-				Localized: field.(map[string]interface{})["localized"].(bool),
-				Required:  field.(map[string]interface{})["required"].(bool),
-				Disabled:  field.(map[string]interface{})["disabled"].(bool),
-				Omitted:   field.(map[string]interface{})["omitted"].(bool),
-			})
+
+		contentfulField = &contentful.Field{
+			ID:        field.(map[string]interface{})["id"].(string),
+			Name:      field.(map[string]interface{})["name"].(string),
+			Type:      field.(map[string]interface{})["type"].(string),
+			Localized: field.(map[string]interface{})["localized"].(bool),
+			Required:  field.(map[string]interface{})["required"].(bool),
+			Disabled:  field.(map[string]interface{})["disabled"].(bool),
+			Omitted:   field.(map[string]interface{})["omitted"].(bool),
+		}
+
+		if items := processItems(field.(map[string]interface{})["items"].(*schema.Set)); items != nil {
+			contentfulField.Items = items
+		}
+
+		existingFields = append(existingFields, contentfulField)
 	}
 
 	return existingFields, deletedFields
+}
+
+func processItems(fieldItems *schema.Set) *contentful.FieldTypeArrayItem {
+	var items *contentful.FieldTypeArrayItem
+	for _, item := range fieldItems.List() {
+		var validations []contentful.FieldValidation
+
+		for _, validationList := range item.(map[string]interface{})["validations"].(*schema.Set).List() {
+			for key, value := range validationList.(map[string]interface{}) {
+				if key == "linkContentType" {
+					var linkList []string
+					for _, linkContentType := range value.([]interface{}) {
+						linkList = append(linkList, linkContentType.(string))
+					}
+					validations = append(validations, contentful.FieldValidationLink{LinkContentType: linkList})
+				}
+			}
+		}
+
+		items = &contentful.FieldTypeArrayItem{
+			Type:        item.(map[string]interface{})["type"].(string),
+			Validations: validations,
+			LinkType:    item.(map[string]interface{})["link_type"].(string),
+		}
+	}
+	return items
 }

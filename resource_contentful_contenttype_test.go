@@ -124,7 +124,7 @@ resource "contentful_contenttype" "mycontenttype" {
   field {
     id = "field2"
     name = "Field 2"
-    type = "Number"
+    type = "Integer"
     required = false
   }
 }
