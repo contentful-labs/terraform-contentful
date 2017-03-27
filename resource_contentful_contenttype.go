@@ -70,12 +70,23 @@ func resourceContentfulContentType() *schema.Resource {
 									"validations": &schema.Schema{
 										Type:     schema.TypeSet,
 										Optional: true,
+										MaxItems: 1,
 										Elem: &schema.Resource{
 											Schema: map[string]*schema.Schema{
-												"linkContentType": &schema.Schema{
+												"link_content_type": &schema.Schema{
 													Type:     schema.TypeList,
 													Optional: true,
 													Elem:     &schema.Schema{Type: schema.TypeString},
+												},
+												"link_mimetype_group": &schema.Schema{
+													Type:     schema.TypeList,
+													Optional: true,
+													Elem:     &schema.Schema{Type: schema.TypeString},
+												},
+												"size": &schema.Schema{
+													Type:     schema.TypeMap,
+													Optional: true,
+													Elem:     &schema.Schema{Type: schema.TypeFloat},
 												},
 											},
 										},
@@ -313,15 +324,41 @@ func processItems(fieldItems *schema.Set) *contentful.FieldTypeArrayItem {
 		var validations []contentful.FieldValidation
 
 		for _, validationList := range item.(map[string]interface{})["validations"].(*schema.Set).List() {
-			for key, value := range validationList.(map[string]interface{}) {
-				if key == "linkContentType" {
+
+			for key, validation := range validationList.(map[string]interface{}) {
+
+				switch key {
+				case "link_content_type":
 					var linkList []string
-					for _, linkContentType := range value.([]interface{}) {
+					for _, linkContentType := range validation.([]interface{}) {
 						linkList = append(linkList, linkContentType.(string))
 					}
-					validations = append(validations, contentful.FieldValidationLink{LinkContentType: linkList})
+					if len(linkList) > 0 {
+						validations = append(validations, contentful.FieldValidationLink{LinkContentType: linkList})
+					}
+				case "link_mimetype_group":
+					var mimeGroupList []string
+					for _, mimeGroup := range validation.([]interface{}) {
+						mimeGroupList = append(mimeGroupList, mimeGroup.(string))
+					}
+					if len(mimeGroupList) > 0 {
+						validations = append(validations, contentful.FieldValidationMimeType{MimeTypes: mimeGroupList})
+					}
+				case "size":
+					if min, ok := validation.(map[string]interface{})["min"]; ok {
+						if max, ok := validation.(map[string]interface{})["max"]; ok {
+							validations = append(validations, contentful.MinMax{
+								Min: min.(float64),
+								Max: max.(float64),
+							})
+						}
+					}
+				default:
+					validations = append(validations, struct{}{})
 				}
+
 			}
+
 		}
 
 		items = &contentful.FieldTypeArrayItem{

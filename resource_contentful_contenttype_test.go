@@ -93,7 +93,7 @@ resource "contentful_space" "myspace" {
 }
 
 resource "contentful_contenttype" "mycontenttype" {
-  space_id = "${contentful_space.myspace.id}"
+  space_id = "wmwfkp0s3cyz"
   depends_on = ["contentful_space.myspace"]
 
   name = "Terraform"
@@ -122,7 +122,7 @@ resource "contentful_space" "myspace" {
 }
 
 resource "contentful_contenttype" "mycontenttype" {
-  space_id = "${contentful_space.myspace.id}"
+  space_id = "wmwfkp0s3cyz"
   depends_on = ["contentful_space.myspace"]
 
   name = "Terraform name change"
@@ -138,13 +138,8 @@ resource "contentful_contenttype" "mycontenttype" {
 }
 `
 var testAccContentfulContentTypeLinkConfig = `
-resource "contentful_space" "myspace" {
-  name = "Terraform Space"
-}
-
 resource "contentful_contenttype" "mycontenttype" {
-  space_id = "${contentful_space.myspace.id}"
-  depends_on = ["contentful_space.myspace"]
+  space_id = "wmwfkp0s3cyz"
 
   name = "Terraform name change"
   description = "Terraform Content Type"
@@ -159,9 +154,7 @@ resource "contentful_contenttype" "mycontenttype" {
 }
 
 resource "contentful_contenttype" "linked" {
-  space_id = "${contentful_space.myspace.id}"
-  depends_on = ["contentful_space.myspace"]
-  depends_on = ["contentful_contenttype.mycontenttype"]
+  space_id = "wmwfkp0s3cyz"
 
   name = "Terraform Links"
   description = "Terraform Content Type with links"
@@ -171,10 +164,10 @@ resource "contentful_contenttype" "linked" {
     id = "image"
     name = "Image"
     type = "Array"
-	items {
-		type = "Link"
-		link_type = "Asset"
-	}
+		items {
+			type = "Link"
+			link_type = "Asset"
+		}
     required = false
   }
 
@@ -182,13 +175,13 @@ resource "contentful_contenttype" "linked" {
     id = "ctlink"
     name = "CT Link"
     type = "Array"
-	items {
-		type = "Link"
-		validations {
-			linkContentType = ["${contentful_contenttype.mycontenttype.id}"]
+		items {
+			type = "Link"
+			validations {
+				link_content_type = ["${contentful_contenttype.mycontenttype.id}"]
+			}
+			link_type = "Entry"
 		}
-		link_type = "Entry"
-	}
     required = false
   }
 
