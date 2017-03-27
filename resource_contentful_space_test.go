@@ -37,9 +37,9 @@ func testAccCheckContentfulSpaceDestroy(s *terraform.State) error {
 			continue
 		}
 
-		space, err := client.GetSpace(rs.Primary.ID)
+		space, err := client.Spaces.Get(rs.Primary.ID)
 		if err == nil {
-			return fmt.Errorf("Space %s still exists after destroy", space.ID())
+			return fmt.Errorf("Space %s still exists after destroy", space.Sys.ID)
 		}
 	}
 

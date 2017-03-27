@@ -38,10 +38,12 @@ func resourceContentfulSpace() *schema.Resource {
 func resourceSpaceCreate(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
 
-	space := client.NewSpace()
-	space.Name = d.Get("name").(string)
-	space.DefaultLocale = d.Get("default_locale").(string)
-	err = space.Save()
+	space := &contentful.Space{
+		Name:          d.Get("name").(string),
+		DefaultLocale: d.Get("default_locale").(string),
+	}
+
+	err = client.Spaces.Upsert(space)
 	if err != nil {
 		return err
 	}
@@ -58,9 +60,9 @@ func resourceSpaceCreate(d *schema.ResourceData, m interface{}) (err error) {
 
 func resourceSpaceRead(d *schema.ResourceData, m interface{}) error {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Id()
 
-	_, err := client.GetSpace(d.Id())
-
+	_, err := client.Spaces.Get(spaceID)
 	if _, ok := err.(contentful.NotFoundError); ok {
 		d.SetId("")
 		return nil
@@ -71,14 +73,16 @@ func resourceSpaceRead(d *schema.ResourceData, m interface{}) error {
 
 func resourceSpaceUpdate(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Id()
 
-	space, err := client.GetSpace(d.Id())
+	space, err := client.Spaces.Get(spaceID)
 	if err != nil {
 		return err
 	}
 
 	space.Name = d.Get("name").(string)
-	err = space.Save()
+
+	err = client.Spaces.Upsert(space)
 	if err != nil {
 		return err
 	}
@@ -88,13 +92,14 @@ func resourceSpaceUpdate(d *schema.ResourceData, m interface{}) (err error) {
 
 func resourceSpaceDelete(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Id()
 
-	space, err := client.GetSpace(d.Id())
+	space, err := client.Spaces.Get(spaceID)
 	if err != nil {
 		return err
 	}
 
-	err = space.Delete()
+	err = client.Spaces.Delete(space)
 	if _, ok := err.(contentful.NotFoundError); ok {
 		return nil
 	}

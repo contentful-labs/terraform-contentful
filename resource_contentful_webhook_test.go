@@ -61,15 +61,9 @@ func testAccCheckContentfulWebhookExists(n string, webhook *contentful.Webhook) 
 			return fmt.Errorf("No webhook ID is set")
 		}
 
-		// sdk client
 		client := testAccProvider.Meta().(*contentful.Contentful)
 
-		space, err := client.GetSpace(spaceID)
-		if err != nil {
-			return fmt.Errorf("No space with this id: %s", spaceID)
-		}
-
-		contentfulWebhook, err := space.GetWebhook(rs.Primary.ID)
+		contentfulWebhook, err := client.Webhooks.Get(spaceID, rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -125,15 +119,7 @@ func testAccContentfulWebhookDestroy(s *terraform.State) error {
 		// sdk client
 		client := testAccProvider.Meta().(*contentful.Contentful)
 
-		space, err := client.GetSpace(spaceID)
-		if _, ok := err.(contentful.NotFoundError); ok {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-
-		_, err = space.GetWebhook(rs.Primary.ID)
+		_, err := client.Webhooks.Get(spaceID, rs.Primary.ID)
 		if _, ok := err.(contentful.NotFoundError); ok {
 			return nil
 		}

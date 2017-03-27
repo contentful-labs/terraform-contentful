@@ -116,16 +116,14 @@ func resourceContentfulContentType() *schema.Resource {
 
 func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
+	ct := &contentful.ContentType{
+		Name:         d.Get("name").(string),
+		DisplayField: d.Get("display_field").(string),
+		Description:  d.Get("description").(string),
+		Fields:       []*contentful.Field{},
 	}
-
-	ct := space.NewContentType()
-	ct.Name = d.Get("name").(string)
-	ct.DisplayField = d.Get("display_field").(string)
-	ct.Description = d.Get("description").(string)
 
 	for _, rawField := range d.Get("field").(*schema.Set).List() {
 		field := rawField.(map[string]interface{})
@@ -147,11 +145,11 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 		ct.Fields = append(ct.Fields, contentfulField)
 	}
 
-	if err = ct.Save(); err != nil {
+	if err = client.ContentTypes.Upsert(spaceID, ct); err != nil {
 		return err
 	}
 
-	if err = ct.Activate(); err != nil {
+	if err = client.ContentTypes.Activate(spaceID, ct); err != nil {
 		//@TODO Maybe delete the CT ?
 		return err
 	}
@@ -167,13 +165,9 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 
 func resourceContentTypeRead(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
-	}
-
-	_, err = space.GetContentType(d.Id())
+	_, err = client.ContentTypes.Get(spaceID, d.Id())
 
 	return err
 }
@@ -183,13 +177,9 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 	var deletedFields []*contentful.Field
 
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
-	}
-
-	ct, err := space.GetContentType(d.Id())
+	ct, err := client.ContentTypes.Get(spaceID, d.Id())
 	if err != nil {
 		return err
 	}
@@ -211,11 +201,11 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 		}
 	}
 
-	if err = ct.Save(); err != nil {
+	if err = client.ContentTypes.Upsert(spaceID, ct); err != nil {
 		return err
 	}
 
-	if err = ct.Activate(); err != nil {
+	if err = client.ContentTypes.Activate(spaceID, ct); err != nil {
 		//@TODO Maybe delete the CT ?
 		return err
 	}
@@ -223,11 +213,11 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 	if deletedFields != nil {
 		ct.Fields = existingFields
 
-		if err = ct.Save(); err != nil {
+		if err = client.ContentTypes.Upsert(spaceID, ct); err != nil {
 			return err
 		}
 
-		if err = ct.Activate(); err != nil {
+		if err = client.ContentTypes.Activate(spaceID, ct); err != nil {
 			//@TODO Maybe delete the CT ?
 			return err
 		}
@@ -238,18 +228,19 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 
 func resourceContentTypeDelete(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
+	ct, err := client.ContentTypes.Get(spaceID, d.Id())
 	if err != nil {
 		return err
 	}
 
-	ct, err := space.GetContentType(d.Id())
+	err = client.ContentTypes.Deactivate(spaceID, ct)
 	if err != nil {
 		return err
 	}
 
-	if err = ct.Delete(); err != nil {
+	if err = client.ContentTypes.Delete(spaceID, ct); err != nil {
 		return err
 	}
 

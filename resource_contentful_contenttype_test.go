@@ -52,12 +52,7 @@ func testAccCheckContentfulContentTypeExists(n string, contentType *contentful.C
 
 		client := testAccProvider.Meta().(*contentful.Contentful)
 
-		space, err := client.GetSpace(spaceID)
-		if err != nil {
-			return fmt.Errorf("No space with this id: %s", rs.Primary.Attributes["space_id"])
-		}
-
-		ct, err := space.GetContentType(rs.Primary.ID)
+		ct, err := client.ContentTypes.Get(spaceID, rs.Primary.ID)
 		if err != nil {
 			return err
 		}
@@ -81,16 +76,7 @@ func testAccCheckContentfulContentTypeDestroy(s *terraform.State) (err error) {
 
 		client := testAccProvider.Meta().(*contentful.Contentful)
 
-		space, err := client.GetSpace(spaceID)
-
-		if err != nil {
-			if _, ok := err.(contentful.NotFoundError); ok {
-				return nil
-			}
-			return fmt.Errorf("Error checking space_id: %s", spaceID)
-		}
-
-		_, err = space.GetContentType(rs.Primary.ID)
+		_, err := client.ContentTypes.Get(spaceID, rs.Primary.ID)
 		if _, ok := err.(contentful.NotFoundError); ok {
 			return nil
 		}
