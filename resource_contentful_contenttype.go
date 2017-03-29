@@ -118,6 +118,11 @@ func resourceContentfulContentType() *schema.Resource {
 							Optional: true,
 							Default:  false,
 						},
+						"validations": &schema.Schema{
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+						},
 					},
 				},
 			},
@@ -147,6 +152,15 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 			Required:  field["required"].(bool),
 			Disabled:  field["disabled"].(bool),
 			Omitted:   field["omitted"].(bool),
+		}
+
+		if validations, ok := field["validations"].([]interface{}); ok {
+			parsedValidations, err := contentful.ParseValidations(validations)
+			if err != nil {
+				return err
+			}
+
+			contentfulField.Validations = parsedValidations
 		}
 
 		if items := processItems(field["items"].(*schema.Set)); items != nil {
