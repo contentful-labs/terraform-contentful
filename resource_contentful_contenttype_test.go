@@ -18,17 +18,17 @@ func TestAccContentfulContentType_Basic(t *testing.T) {
 			resource.TestStep{
 				Config: testAccContentfulContentTypeConfig,
 				Check: resource.TestCheckResourceAttr(
-					"contentful_contenttype.mycontenttype", "name", "Terraform"),
+					"contentful_contenttype.mycontenttype", "name", "TF Acc Test CT 1"),
 			},
 			resource.TestStep{
 				Config: testAccContentfulContentTypeUpdateConfig,
 				Check: resource.TestCheckResourceAttr(
-					"contentful_contenttype.mycontenttype", "name", "Terraform name change"),
+					"contentful_contenttype.mycontenttype", "name", "TF Acc Test CT name change"),
 			},
 			resource.TestStep{
 				Config: testAccContentfulContentTypeLinkConfig,
 				Check: resource.TestCheckResourceAttr(
-					"contentful_contenttype.linked", "name", "Terraform Links"),
+					"contentful_contenttype.mylinked_contenttype", "name", "TF Acc Test Linked CT"),
 			},
 		},
 	})
@@ -88,16 +88,16 @@ func testAccCheckContentfulContentTypeDestroy(s *terraform.State) (err error) {
 }
 
 var testAccContentfulContentTypeConfig = `
-resource "contentful_space" "myspace" {
-  name = "Terraform Space"
-}
+// resource "contentful_space" "myspace" {
+//   name = "TF Acc Test Space"
+// }
 
 resource "contentful_contenttype" "mycontenttype" {
-  space_id = "wmwfkp0s3cyz"
-  depends_on = ["contentful_space.myspace"]
+  // space_id = "${contentful_space.myspace.id}"
+  space_id = "p025n8nykscm"
 
-  name = "Terraform"
-  description = "Terraform Content Type"
+  name = "TF Acc Test CT 1"
+  description = "Terraform Acc Test Content Type"
   display_field = "field1"
 
   field {
@@ -117,71 +117,75 @@ resource "contentful_contenttype" "mycontenttype" {
 `
 
 var testAccContentfulContentTypeUpdateConfig = `
-resource "contentful_space" "myspace" {
-  name = "Terraform Space"
-}
-
 resource "contentful_contenttype" "mycontenttype" {
-  space_id = "wmwfkp0s3cyz"
-  depends_on = ["contentful_space.myspace"]
+  space_id = "${contentful_space.myspace.id}"
 
-  name = "Terraform name change"
-  description = "Terraform Content Type"
+  name = "TF Acc Test CT name change"
+  description = "Terraform Acc Test Content Type description change"
   display_field = "field1"
 
   field {
     id = "field1"
-    name = "New field name"
+    name = "Field 1 name change"
     type = "Text"
     required = true
   }
+
+  field {
+    id = "field3"
+    name = "Field 3 new field"
+    type = "Integer"
+    required = true
+  }	
 }
 `
 var testAccContentfulContentTypeLinkConfig = `
 resource "contentful_contenttype" "mycontenttype" {
-  space_id = "wmwfkp0s3cyz"
+  space_id = "${contentful_space.myspace.id}"
 
-  name = "Terraform name change"
-  description = "Terraform Content Type"
+  name = "TF Acc Test CT name change"
+  description = "Terraform Acc Test Content Type description change"
   display_field = "field1"
 
   field {
     id = "field1"
-    name = "New field name"
+    name = "Field 1 name change"
     type = "Text"
     required = true
   }
-}
-
-resource "contentful_contenttype" "linked" {
-  space_id = "wmwfkp0s3cyz"
-
-  name = "Terraform Links"
-  description = "Terraform Content Type with links"
-  display_field = "image"
 
   field {
-    id = "image"
-    name = "Image"
+    id = "field3"
+    name = "Field 3 new field"
+    type = "Integer"
+    required = true
+  }	
+}
+
+resource "contentful_contenttype" "mylinked_contenttype" {
+  space_id = "${contentful_space.myspace.id}"
+
+  name = "TF Acc Test Linked CT"
+  description = "Terraform Acc Test Content Type with links"
+  display_field = "asset_field"
+
+  field {
+    id = "asset_field"
+    name = "Asset Field"
     type = "Array"
 		items {
 			type = "Link"
 			link_type = "Asset"
 		}
-    required = false
+    required = true
   }
 
   field {
-    id = "ctlink"
-    name = "CT Link"
-    type = "Array"
-		items {
-			type = "Link"
-			validations {
-				link_content_type = ["${contentful_contenttype.mycontenttype.id}"]
-			}
-			link_type = "Entry"
-		}
+    id = "entry_link_field"
+    name = "Entry Link Field"
+    type = "Link"
+		link_type = "Entry"
+		validations = ["{\"linkContentType\": [\"${contentful_contenttype.mycontenttype.id}\"]}"]
     required = false
   }
 

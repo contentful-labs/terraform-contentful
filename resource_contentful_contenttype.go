@@ -57,6 +57,10 @@ func resourceContentfulContentType() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+						"link_type": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 						"items": &schema.Schema{
 							Type:     schema.TypeSet,
 							Optional: true,
@@ -68,28 +72,9 @@ func resourceContentfulContentType() *schema.Resource {
 										Required: true,
 									},
 									"validations": &schema.Schema{
-										Type:     schema.TypeSet,
+										Type:     schema.TypeList,
 										Optional: true,
-										MaxItems: 1,
-										Elem: &schema.Resource{
-											Schema: map[string]*schema.Schema{
-												"link_content_type": &schema.Schema{
-													Type:     schema.TypeList,
-													Optional: true,
-													Elem:     &schema.Schema{Type: schema.TypeString},
-												},
-												"link_mimetype_group": &schema.Schema{
-													Type:     schema.TypeList,
-													Optional: true,
-													Elem:     &schema.Schema{Type: schema.TypeString},
-												},
-												"size": &schema.Schema{
-													Type:     schema.TypeMap,
-													Optional: true,
-													Elem:     &schema.Schema{Type: schema.TypeFloat},
-												},
-											},
-										},
+										Elem:     &schema.Schema{Type: schema.TypeString},
 									},
 									"link_type": &schema.Schema{
 										Type:     schema.TypeString,
@@ -137,8 +122,11 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 	ct := &contentful.ContentType{
 		Name:         d.Get("name").(string),
 		DisplayField: d.Get("display_field").(string),
-		Description:  d.Get("description").(string),
 		Fields:       []*contentful.Field{},
+	}
+
+	if description, ok := d.GetOk("description"); ok {
+		ct.Description = description.(string)
 	}
 
 	for _, rawField := range d.Get("field").(*schema.Set).List() {
@@ -152,6 +140,10 @@ func resourceContentTypeCreate(d *schema.ResourceData, m interface{}) (err error
 			Required:  field["required"].(bool),
 			Disabled:  field["disabled"].(bool),
 			Omitted:   field["omitted"].(bool),
+		}
+
+		if linkType, ok := field["link_type"].(string); ok {
+			contentfulField.LinkType = linkType
 		}
 
 		if validations, ok := field["validations"].([]interface{}); ok {
@@ -211,7 +203,10 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 
 	ct.Name = d.Get("name").(string)
 	ct.DisplayField = d.Get("display_field").(string)
-	ct.Description = d.Get("description").(string)
+
+	if description, ok := d.GetOk("description"); ok {
+		ct.Description = description.(string)
+	}
 
 	// Figure out if fields were removed
 	if d.HasChange("field") {
@@ -287,10 +282,12 @@ func checkFieldChanges(old, new *schema.Set) ([]*contentful.Field, []*contentful
 	var deletedFields []*contentful.Field
 	var fieldRemoved bool
 
-	for _, oldField := range old.List() {
+	for _, f := range old.List() {
+		oldField := f.(map[string]interface{})
+
 		fieldRemoved = true
 		for _, newField := range new.List() {
-			if oldField.(map[string]interface{})["id"].(string) == newField.(map[string]interface{})["id"].(string) {
+			if oldField["id"].(string) == newField.(map[string]interface{})["id"].(string) {
 				fieldRemoved = false
 				break
 			}
@@ -299,30 +296,42 @@ func checkFieldChanges(old, new *schema.Set) ([]*contentful.Field, []*contentful
 		if fieldRemoved {
 			deletedFields = append(deletedFields,
 				&contentful.Field{
-					ID:        oldField.(map[string]interface{})["id"].(string),
-					Name:      oldField.(map[string]interface{})["name"].(string),
-					Type:      oldField.(map[string]interface{})["type"].(string),
-					Localized: oldField.(map[string]interface{})["localized"].(bool),
-					Required:  oldField.(map[string]interface{})["required"].(bool),
-					Disabled:  oldField.(map[string]interface{})["disabled"].(bool),
+					ID:        oldField["id"].(string),
+					Name:      oldField["name"].(string),
+					Type:      oldField["type"].(string),
+					LinkType:  oldField["link_type"].(string),
+					Localized: oldField["localized"].(bool),
+					Required:  oldField["required"].(bool),
+					Disabled:  oldField["disabled"].(bool),
 					Omitted:   true,
 				})
 		}
 	}
 
-	for _, field := range new.List() {
+	for _, f := range new.List() {
+		newField := f.(map[string]interface{})
 
 		contentfulField = &contentful.Field{
-			ID:        field.(map[string]interface{})["id"].(string),
-			Name:      field.(map[string]interface{})["name"].(string),
-			Type:      field.(map[string]interface{})["type"].(string),
-			Localized: field.(map[string]interface{})["localized"].(bool),
-			Required:  field.(map[string]interface{})["required"].(bool),
-			Disabled:  field.(map[string]interface{})["disabled"].(bool),
-			Omitted:   field.(map[string]interface{})["omitted"].(bool),
+			ID:        newField["id"].(string),
+			Name:      newField["name"].(string),
+			Type:      newField["type"].(string),
+			Localized: newField["localized"].(bool),
+			Required:  newField["required"].(bool),
+			Disabled:  newField["disabled"].(bool),
+			Omitted:   newField["omitted"].(bool),
 		}
 
-		if items := processItems(field.(map[string]interface{})["items"].(*schema.Set)); items != nil {
+		if linkType, ok := newField["link_type"].(string); ok {
+			contentfulField.LinkType = linkType
+		}
+
+		if validations, ok := newField["validations"].([]interface{}); ok {
+			parsedValidations, _ := contentful.ParseValidations(validations)
+
+			contentfulField.Validations = parsedValidations
+		}
+
+		if items := processItems(newField["items"].(*schema.Set)); items != nil {
 			contentfulField.Items = items
 		}
 
@@ -334,51 +343,20 @@ func checkFieldChanges(old, new *schema.Set) ([]*contentful.Field, []*contentful
 
 func processItems(fieldItems *schema.Set) *contentful.FieldTypeArrayItem {
 	var items *contentful.FieldTypeArrayItem
-	for _, item := range fieldItems.List() {
+
+	for _, i := range fieldItems.List() {
+		item := i.(map[string]interface{})
+
 		var validations []contentful.FieldValidation
 
-		for _, validationList := range item.(map[string]interface{})["validations"].(*schema.Set).List() {
-
-			for key, validation := range validationList.(map[string]interface{}) {
-
-				switch key {
-				case "link_content_type":
-					var linkList []string
-					for _, linkContentType := range validation.([]interface{}) {
-						linkList = append(linkList, linkContentType.(string))
-					}
-					if len(linkList) > 0 {
-						validations = append(validations, contentful.FieldValidationLink{LinkContentType: linkList})
-					}
-				case "link_mimetype_group":
-					var mimeGroupList []string
-					for _, mimeGroup := range validation.([]interface{}) {
-						mimeGroupList = append(mimeGroupList, mimeGroup.(string))
-					}
-					if len(mimeGroupList) > 0 {
-						validations = append(validations, contentful.FieldValidationMimeType{MimeTypes: mimeGroupList})
-					}
-				case "size":
-					if min, ok := validation.(map[string]interface{})["min"]; ok {
-						if max, ok := validation.(map[string]interface{})["max"]; ok {
-							validations = append(validations, contentful.MinMax{
-								Min: min.(float64),
-								Max: max.(float64),
-							})
-						}
-					}
-				default:
-					validations = append(validations, struct{}{})
-				}
-
-			}
-
+		if fieldValidations, ok := item["validations"].([]interface{}); ok {
+			validations, _ = contentful.ParseValidations(fieldValidations)
 		}
 
 		items = &contentful.FieldTypeArrayItem{
-			Type:        item.(map[string]interface{})["type"].(string),
+			Type:        item["type"].(string),
 			Validations: validations,
-			LinkType:    item.(map[string]interface{})["link_type"].(string),
+			LinkType:    item["link_type"].(string),
 		}
 	}
 	return items
