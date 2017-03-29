@@ -29,7 +29,6 @@ func resourceContentfulLocale() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			// Locale specific props
 			"code": &schema.Schema{
 				Type:     schema.TypeString,
 				Required: true,
@@ -40,6 +39,16 @@ func resourceContentfulLocale() *schema.Resource {
 				Default:  "en-US",
 			},
 			"optional": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"cda": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+			},
+			"cma": &schema.Schema{
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  false,
@@ -57,6 +66,8 @@ func resourceCreateLocale(d *schema.ResourceData, m interface{}) (err error) {
 		Code:         d.Get("code").(string),
 		FallbackCode: d.Get("fallback_code").(string),
 		Optional:     d.Get("optional").(bool),
+		CDA:          d.Get("cda").(bool),
+		CMA:          d.Get("cma").(bool),
 	}
 
 	err = client.Locales.Upsert(spaceID, locale)
@@ -77,8 +88,9 @@ func resourceCreateLocale(d *schema.ResourceData, m interface{}) (err error) {
 func resourceReadLocale(d *schema.ResourceData, m interface{}) error {
 	client := m.(*contentful.Contentful)
 	spaceID := d.Get("space_id").(string)
+	localeID := d.Id()
 
-	locale, err := client.Locales.Get(spaceID, d.Id())
+	locale, err := client.Locales.Get(spaceID, localeID)
 	if _, ok := err.(*contentful.NotFoundError); ok {
 		d.SetId("")
 		return nil
@@ -94,8 +106,9 @@ func resourceReadLocale(d *schema.ResourceData, m interface{}) error {
 func resourceUpdateLocale(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
 	spaceID := d.Get("space_id").(string)
+	localeID := d.Id()
 
-	locale, err := client.Locales.Get(spaceID, d.Id())
+	locale, err := client.Locales.Get(spaceID, localeID)
 	if err != nil {
 		return err
 	}
@@ -104,6 +117,8 @@ func resourceUpdateLocale(d *schema.ResourceData, m interface{}) (err error) {
 	locale.Code = d.Get("code").(string)
 	locale.FallbackCode = d.Get("fallback_code").(string)
 	locale.Optional = d.Get("optional").(bool)
+	locale.CDA = d.Get("cda").(bool)
+	locale.CMA = d.Get("cma").(bool)
 
 	err = client.Locales.Upsert(spaceID, locale)
 	if err != nil {
@@ -121,8 +136,9 @@ func resourceUpdateLocale(d *schema.ResourceData, m interface{}) (err error) {
 func resourceDeleteLocale(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
 	spaceID := d.Get("space_id").(string)
+	localeID := d.Id()
 
-	locale, err := client.Locales.Get(spaceID, d.Id())
+	locale, err := client.Locales.Get(spaceID, localeID)
 	if err != nil {
 		return err
 	}
@@ -150,12 +166,22 @@ func setLocaleProperties(d *schema.ResourceData, locale *contentful.Locale) erro
 		return err
 	}
 
-	err = d.Set("fallbackCode", locale.FallbackCode)
+	err = d.Set("fallback_code", locale.FallbackCode)
 	if err != nil {
 		return err
 	}
 
 	err = d.Set("optional", locale.Optional)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("cda", locale.CDA)
+	if err != nil {
+		return err
+	}
+
+	err = d.Set("cma", locale.CMA)
 	if err != nil {
 		return err
 	}
