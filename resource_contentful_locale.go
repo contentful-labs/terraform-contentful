@@ -50,19 +50,16 @@ func resourceContentfulLocale() *schema.Resource {
 
 func resourceCreateLocale(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
+	locale := &contentful.Locale{
+		Name:         d.Get("name").(string),
+		Code:         d.Get("code").(string),
+		FallbackCode: d.Get("fallback_code").(string),
+		Optional:     d.Get("optional").(bool),
 	}
 
-	locale := space.NewLocale()
-	locale.Name = d.Get("name").(string)
-	locale.Code = d.Get("code").(string)
-	locale.FallbackCode = d.Get("fallback_code").(string)
-	locale.Optional = d.Get("optional").(bool)
-
-	err = locale.Save()
+	err = client.Locales.Upsert(spaceID, locale)
 	if err != nil {
 		return err
 	}
@@ -79,13 +76,9 @@ func resourceCreateLocale(d *schema.ResourceData, m interface{}) (err error) {
 
 func resourceReadLocale(d *schema.ResourceData, m interface{}) error {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
-	}
-
-	locale, err := space.GetLocale(d.Id())
+	locale, err := client.Locales.Get(spaceID, d.Id())
 	if _, ok := err.(*contentful.NotFoundError); ok {
 		d.SetId("")
 		return nil
@@ -100,13 +93,9 @@ func resourceReadLocale(d *schema.ResourceData, m interface{}) error {
 
 func resourceUpdateLocale(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
-	}
-
-	locale, err := space.GetLocale(d.Id())
+	locale, err := client.Locales.Get(spaceID, d.Id())
 	if err != nil {
 		return err
 	}
@@ -115,7 +104,8 @@ func resourceUpdateLocale(d *schema.ResourceData, m interface{}) (err error) {
 	locale.Code = d.Get("code").(string)
 	locale.FallbackCode = d.Get("fallback_code").(string)
 	locale.Optional = d.Get("optional").(bool)
-	err = locale.Save()
+
+	err = client.Locales.Upsert(spaceID, locale)
 	if err != nil {
 		return err
 	}
@@ -130,18 +120,14 @@ func resourceUpdateLocale(d *schema.ResourceData, m interface{}) (err error) {
 
 func resourceDeleteLocale(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
+	locale, err := client.Locales.Get(spaceID, d.Id())
 	if err != nil {
 		return err
 	}
 
-	locale, err := space.GetLocale(d.Id())
-	if err != nil {
-		return err
-	}
-
-	err = locale.Delete()
+	err = client.Locales.Delete(spaceID, locale)
 	if _, ok := err.(*contentful.NotFoundError); ok {
 		return nil
 	}

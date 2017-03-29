@@ -45,14 +45,11 @@ func resourceContentfulAPIKey() *schema.Resource {
 func resourceCreateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
+	apiKey := &contentful.APIKey{
+		Name: d.Get("name").(string),
 	}
 
-	apiKey := space.NewAPIKey()
-	apiKey.Name = d.Get("name").(string)
-	err = apiKey.Save()
+	err = client.APIKeys.Upsert(d.Get("space_id").(string), apiKey)
 	if err != nil {
 		return err
 	}
@@ -69,18 +66,13 @@ func resourceCreateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 func resourceUpdateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
-	}
-
-	apiKey, err := space.GetAPIKey(d.Id())
+	apiKey, err := client.APIKeys.Get(d.Get("space_id").(string), d.Id())
 	if err != nil {
 		return err
 	}
 
 	apiKey.Name = d.Get("name").(string)
-	err = apiKey.Save()
+	err = client.APIKeys.Upsert(d.Get("space_id").(string), apiKey)
 	if err != nil {
 		return err
 	}
@@ -97,12 +89,7 @@ func resourceUpdateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 func resourceReadAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
-	}
-
-	apiKey, err := space.GetAPIKey(d.Id())
+	apiKey, err := client.APIKeys.Get(d.Get("space_id").(string), d.Id())
 	if _, ok := err.(contentful.NotFoundError); ok {
 		d.SetId("")
 		return nil
@@ -114,17 +101,12 @@ func resourceReadAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 func resourceDeleteAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
+	apiKey, err := client.APIKeys.Get(d.Get("space_id").(string), d.Id())
 	if err != nil {
 		return err
 	}
 
-	apiKey, err := space.GetAPIKey(d.Id())
-	if err != nil {
-		return err
-	}
-
-	return apiKey.Delete()
+	return client.APIKeys.Delete(d.Get("space_id").(string), apiKey)
 }
 
 func setAPIKeyProperties(d *schema.ResourceData, apiKey *contentful.APIKey) error {

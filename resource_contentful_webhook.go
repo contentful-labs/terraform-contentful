@@ -62,21 +62,18 @@ func resourceContentfulWebhook() *schema.Resource {
 
 func resourceCreateWebhook(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
+	webhook := &contentful.Webhook{
+		Name:              d.Get("name").(string),
+		URL:               d.Get("url").(string),
+		Topics:            transformTopicsToContentfulFormat(d.Get("topics").([]interface{})),
+		Headers:           transformHeadersToContentfulFormat(d.Get("headers")),
+		HTTPBasicUsername: d.Get("http_basic_auth_username").(string),
+		HTTPBasicPassword: d.Get("http_basic_auth_password").(string),
 	}
 
-	webhook := space.NewWebhook()
-	webhook.Name = d.Get("name").(string)
-	webhook.URL = d.Get("url").(string)
-	webhook.Topics = transformTopicsToContentfulFormat(d.Get("topics").([]interface{}))
-	webhook.Headers = transformHeadersToContentfulFormat(d.Get("headers"))
-	webhook.HTTPBasicUsername = d.Get("http_basic_auth_username").(string)
-	webhook.HTTPBasicPassword = d.Get("http_basic_auth_password").(string)
-
-	err = webhook.Save()
+	err = client.Webhooks.Upsert(spaceID, webhook)
 	if err != nil {
 		return err
 	}
@@ -93,13 +90,10 @@ func resourceCreateWebhook(d *schema.ResourceData, m interface{}) (err error) {
 
 func resourceUpdateWebhook(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
+	webhookID := d.Id()
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
-	}
-
-	webhook, err := space.GetWebhook(d.Id())
+	webhook, err := client.Webhooks.Get(spaceID, webhookID)
 	if err != nil {
 		return err
 	}
@@ -111,7 +105,7 @@ func resourceUpdateWebhook(d *schema.ResourceData, m interface{}) (err error) {
 	webhook.HTTPBasicUsername = d.Get("http_basic_auth_username").(string)
 	webhook.HTTPBasicPassword = d.Get("http_basic_auth_password").(string)
 
-	err = webhook.Save()
+	err = client.Webhooks.Upsert(spaceID, webhook)
 	if err != nil {
 		return err
 	}
@@ -128,13 +122,10 @@ func resourceUpdateWebhook(d *schema.ResourceData, m interface{}) (err error) {
 
 func resourceReadWebhook(d *schema.ResourceData, m interface{}) error {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
+	webhookID := d.Id()
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
-	if err != nil {
-		return err
-	}
-
-	webhook, err := space.GetWebhook(d.Id())
+	webhook, err := client.Webhooks.Get(spaceID, webhookID)
 	if _, ok := err.(contentful.NotFoundError); ok {
 		d.SetId("")
 		return nil
@@ -149,18 +140,15 @@ func resourceReadWebhook(d *schema.ResourceData, m interface{}) error {
 
 func resourceDeleteWebhook(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
+	webhookID := d.Id()
 
-	space, err := client.GetSpace(d.Get("space_id").(string))
+	webhook, err := client.Webhooks.Get(spaceID, webhookID)
 	if err != nil {
 		return err
 	}
 
-	webhook, err := space.GetWebhook(d.Id())
-	if err != nil {
-		return err
-	}
-
-	err = webhook.Delete()
+	err = client.Webhooks.Delete(spaceID, webhook)
 	if _, ok := err.(contentful.NotFoundError); ok {
 		return nil
 	}
