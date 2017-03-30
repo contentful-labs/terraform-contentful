@@ -208,7 +208,6 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 		ct.Description = description.(string)
 	}
 
-	// Figure out if fields were removed
 	if d.HasChange("field") {
 		old, new := d.GetChange("field")
 
@@ -221,6 +220,9 @@ func resourceContentTypeUpdate(d *schema.ResourceData, m interface{}) (err error
 		}
 	}
 
+	// To remove a field from a content type 4 API calls need to be made.
+	// Ommit the removed fields and publish the new version of the content type,
+	// followed by the field removal and final publish.
 	if err = client.ContentTypes.Upsert(spaceID, ct); err != nil {
 		return err
 	}

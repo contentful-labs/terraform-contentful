@@ -93,8 +93,7 @@ var testAccContentfulContentTypeConfig = `
 // }
 
 resource "contentful_contenttype" "mycontenttype" {
-  // space_id = "${contentful_space.myspace.id}"
-  space_id = "p025n8nykscm"
+  space_id = "${contentful_space.myspace.id}"
 
   name = "TF Acc Test CT 1"
   description = "Terraform Acc Test Content Type"
