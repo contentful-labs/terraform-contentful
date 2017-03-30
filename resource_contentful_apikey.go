@@ -29,14 +29,9 @@ func resourceContentfulAPIKey() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			// Webhook specific props
-			"delivery_api_key": &schema.Schema{
+			"description": &schema.Schema{
 				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"preview_api_key": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
+				Optional: true,
 			},
 		},
 	}
@@ -46,7 +41,8 @@ func resourceCreateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
 
 	apiKey := &contentful.APIKey{
-		Name: d.Get("name").(string),
+		Name:        d.Get("name").(string),
+		Description: d.Get("description").(string),
 	}
 
 	err = client.APIKeys.Upsert(d.Get("space_id").(string), apiKey)
@@ -65,14 +61,18 @@ func resourceCreateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 
 func resourceUpdateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
+	apiKeyID := d.Id()
 
-	apiKey, err := client.APIKeys.Get(d.Get("space_id").(string), d.Id())
+	apiKey, err := client.APIKeys.Get(spaceID, apiKeyID)
 	if err != nil {
 		return err
 	}
 
 	apiKey.Name = d.Get("name").(string)
-	err = client.APIKeys.Upsert(d.Get("space_id").(string), apiKey)
+	apiKey.Description = d.Get("description").(string)
+
+	err = client.APIKeys.Upsert(spaceID, apiKey)
 	if err != nil {
 		return err
 	}
@@ -88,8 +88,10 @@ func resourceUpdateAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 
 func resourceReadAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
+	apiKeyID := d.Id()
 
-	apiKey, err := client.APIKeys.Get(d.Get("space_id").(string), d.Id())
+	apiKey, err := client.APIKeys.Get(spaceID, apiKeyID)
 	if _, ok := err.(contentful.NotFoundError); ok {
 		d.SetId("")
 		return nil
@@ -100,13 +102,15 @@ func resourceReadAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 
 func resourceDeleteAPIKey(d *schema.ResourceData, m interface{}) (err error) {
 	client := m.(*contentful.Contentful)
+	spaceID := d.Get("space_id").(string)
+	apiKeyID := d.Id()
 
-	apiKey, err := client.APIKeys.Get(d.Get("space_id").(string), d.Id())
+	apiKey, err := client.APIKeys.Get(spaceID, apiKeyID)
 	if err != nil {
 		return err
 	}
 
-	return client.APIKeys.Delete(d.Get("space_id").(string), apiKey)
+	return client.APIKeys.Delete(spaceID, apiKey)
 }
 
 func setAPIKeyProperties(d *schema.ResourceData, apiKey *contentful.APIKey) error {
@@ -122,11 +126,7 @@ func setAPIKeyProperties(d *schema.ResourceData, apiKey *contentful.APIKey) erro
 		return err
 	}
 
-	if err := d.Set("delivery_api_key", apiKey.AccessToken); err != nil {
-		return err
-	}
-
-	if err := d.Set("preview_api_key", apiKey.PreviewAPIKey.Sys.ID); err != nil {
+	if err := d.Set("description", apiKey.Description); err != nil {
 		return err
 	}
 
