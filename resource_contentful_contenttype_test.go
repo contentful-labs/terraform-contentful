@@ -182,10 +182,14 @@ resource "contentful_contenttype" "mylinked_contenttype" {
   field {
     id = "entry_link_field"
     name = "Entry Link Field"
-    type = "Link"
-		link_type = "Entry"
-		validations = ["{\"linkContentType\": [\"${contentful_contenttype.mycontenttype.id}\"]}"]
     required = false
+    type = "Link"
+	link_type = "Entry"
+
+	validation {
+	  type = "LinkContentType"
+	  value = "${contentful_contenttype.mycontenttype.id}"
+	}
   }
 
 }

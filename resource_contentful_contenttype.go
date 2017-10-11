@@ -39,9 +39,8 @@ func resourceContentfulContentType() *schema.Resource {
 				Required: true,
 			},
 			"field": &schema.Schema{
-				Type:     schema.TypeSet,
+				Type:     schema.TypeList,
 				Required: true,
-				MinItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"id": &schema.Schema{
@@ -52,7 +51,6 @@ func resourceContentfulContentType() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						//@TODO Add ValidateFunc to validate field type
 						"type": &schema.Schema{
 							Type:     schema.TypeString,
 							Required: true,
@@ -62,7 +60,7 @@ func resourceContentfulContentType() *schema.Resource {
 							Optional: true,
 						},
 						"items": &schema.Schema{
-							Type:     schema.TypeSet,
+							Type:     schema.TypeList,
 							Optional: true,
 							MaxItems: 1,
 							Elem: &schema.Resource{
@@ -71,14 +69,14 @@ func resourceContentfulContentType() *schema.Resource {
 										Type:     schema.TypeString,
 										Required: true,
 									},
-									"validations": &schema.Schema{
-										Type:     schema.TypeList,
-										Optional: true,
-										Elem:     &schema.Schema{Type: schema.TypeString},
-									},
 									"link_type": &schema.Schema{
 										Type:     schema.TypeString,
 										Required: true,
+									},
+									"validation": &schema.Schema{
+										Type:     schema.TypeList,
+										Optional: true,
+										Elem:     generateValidationSchema(),
 									},
 								},
 							},
@@ -103,10 +101,10 @@ func resourceContentfulContentType() *schema.Resource {
 							Optional: true,
 							Default:  false,
 						},
-						"validations": &schema.Schema{
+						"validation": &schema.Schema{
 							Type:     schema.TypeList,
 							Optional: true,
-							Elem:     &schema.Schema{Type: schema.TypeString},
+							Elem:     generateValidationSchema(),
 						},
 					},
 				},
@@ -362,4 +360,395 @@ func processItems(fieldItems *schema.Set) *contentful.FieldTypeArrayItem {
 		}
 	}
 	return items
+}
+
+// Expanders
+
+func expandContentTypeField(in interface{}) *contentful.Field {
+	field := &contentful.Field{}
+	m := in.(map[string]interface{})
+	if v, ok := m["id"].(string); ok {
+		field.ID = v
+	}
+	if v, ok := m["name"].(string); ok {
+		field.Name = v
+	}
+	if v, ok := m["type"].(string); ok {
+		field.Type = v
+	}
+	if v, ok := m["link_type"].(string); ok {
+		field.LinkType = v
+	}
+	if v, ok := m["required"].(bool); ok {
+		field.Required = v
+	}
+	if v, ok := m["localized"].(bool); ok {
+		field.Localized = v
+	}
+	if v, ok := m["disabled"].(bool); ok {
+		field.Disabled = v
+	}
+	if v, ok := m["omitted"].(bool); ok {
+		field.Omitted = v
+	}
+	if v, ok := m["validation"].([]interface{}); ok && len(v) > 0 {
+		validations := make([]contentful.FieldValidation, len(v))
+		for i, val := range v {
+			validations[i] = expandContentTypeFieldValidation(val)
+		}
+		field.Validations = validations
+	}
+	return field
+}
+
+func expandContentTypeFieldValidation(in interface{}) contentful.FieldValidation {
+	m := in.(map[string]interface{})
+	if v, ok := m["link"].([]string); ok {
+		return contentful.FieldValidationLink{
+			LinkContentType: v,
+		}
+	}
+	if v, ok := m["mime_type"].([]string); ok {
+		return contentful.FieldValidationMimeType{
+			MimeTypes: v,
+		}
+	}
+	if v, ok := m["dimension"].([]interface{}); ok {
+		return expandContentTypeFieldValidationDimension(v)
+	}
+	if v, ok := m["size"].([]interface{}); ok {
+		return expandContentTypeFieldValidationSize(v)
+	}
+	if v, ok := m["file_size"].([]interface{}); ok {
+		return expandContentTypeFieldValidationFileSize(v)
+	}
+	if v, ok := m["unique"].(bool); ok {
+		return contentful.FieldValidationUnique{
+			Unique: v,
+		}
+	}
+	if v, ok := m["range"].([]interface{}); ok {
+		return expandContentTypeFieldValidationRange(v)
+	}
+	if v, ok := m["date"].([]interface{}); ok {
+		return expandContentTypeFieldValidationDate(v)
+	}
+	return nil
+}
+
+func expandContentTypeFieldValidationDimension(in []interface{}) contentful.FieldValidation {
+	if len(in) == 0 || in[0] == nil {
+		return contentful.FieldValidationDimension{}
+	}
+
+	validation := contnetful.FieldValidationDimension{}
+	m := in[0].(map[string]interface{})
+	if v, ok := m["min_width"].(float64); ok {
+		if validation.Width == nil {
+			validation.Width = &contentful.MinMax{}
+		}
+		validation.Width.Min = v
+	}
+	if v, ok := m["max_width"].(float64); ok {
+		if validation.Width == nil {
+			validation.Width = &contentful.MinMax{}
+		}
+		validation.Width.Max = v
+	}
+	if v, ok := m["min_height"].(float64); ok {
+		if validation.Height == nil {
+			validation.Width = &contentful.MinMax{}
+		}
+		validation.Height.Min = v
+	}
+	if v, ok := m["max_height"].(float64); ok {
+		if validation.Height == nil {
+			validation.Width = &contentful.MinMax{}
+		}
+		validation.Height.Max = v
+	}
+	if v, ok := m["err_message"].(string); ok {
+		validation.ErrMessage = v
+	}
+	return validation
+}
+
+func expandContentTypeFieldValidationSize(in []interface{}) contentful.FieldValidation {
+	if len(in) == 0 || in[0] == nil {
+		return contentful.FieldValidationSize{}
+	}
+
+	validation := contnetful.FieldValidationSize{}
+	m := in[0].(map[string]interface{})
+	if v, ok := m["min"].(float64); ok {
+		if validation.Size == nil {
+			validation.Size = &contentful.MinMax{}
+		}
+		validation.Size.Min = v
+	}
+	if v, ok := m["max"].(float64); ok {
+		if validation.Size == nil {
+			validation.Size = &contentful.MinMax{}
+		}
+		validation.Size.Max = v
+	}
+	if v, ok := m["err_message"].(string); ok {
+		validation.ErrMessage = v
+	}
+	return validation
+}
+
+func expandContentTypeFieldValidationFileSize(in []interface{}) contentful.FieldValidation {
+	if len(in) == 0 || in[0] == nil {
+		return contentful.FieldValidationFileSize{}
+	}
+
+	validation := contnetful.FieldValidationFileSize{}
+	m := in[0].(map[string]interface{})
+	if v, ok := m["min"].(float64); ok {
+		if validation.Size == nil {
+			validation.Size = &contentful.MinMax{}
+		}
+		validation.Size.Min = v
+	}
+	if v, ok := m["max"].(float64); ok {
+		if validation.Size == nil {
+			validation.Size = &contentful.MinMax{}
+		}
+		validation.Size.Max = v
+	}
+	if v, ok := m["err_message"].(string); ok {
+		validation.ErrMessage = v
+	}
+	return validation
+}
+
+func expandContentTypeFieldValidationRange(in []interface{}) contentful.FieldValidation {
+	if len(in) == 0 || in[0] == nil {
+		return contentful.FieldValidationRange{}
+	}
+
+	validation := contnetful.FieldValidationRange{}
+	m := in[0].(map[string]interface{})
+	if v, ok := m["min"].(float64); ok {
+		if validation.Range == nil {
+			validation.Range = &contentful.MinMax{}
+		}
+		validation.Range.Min = v
+	}
+	if v, ok := m["max"].(float64); ok {
+		if validation.Range == nil {
+			validation.Range = &contentful.MinMax{}
+		}
+		validation.Range.Max = v
+	}
+	if v, ok := m["err_message"].(string); ok {
+		validation.ErrMessage = v
+	}
+	return validation
+}
+
+func expandContentTypeFieldValidationDate(in []interface{}) contentful.FieldValidation {
+	if len(in) == 0 || in[0] == nil {
+		return contentful.FieldValidationDate{}
+	}
+
+	validation := contnetful.FieldValidationDate{}
+	m := in[0].(map[string]interface{})
+	if v, ok := m["min"].(string); ok {
+		if validation.Range == nil {
+			validation.Range = &contentful.MinMax{}
+		}
+		validation.Range.Min = v
+	}
+	if v, ok := m["max"].(string); ok {
+		if validation.Range == nil {
+			validation.Range = &contentful.MinMax{}
+		}
+		validation.Range.Max = v
+	}
+	if v, ok := m["err_message"].(string); ok {
+		validation.ErrMessage = v
+	}
+	return validation
+}
+
+func expandContentTypeFieldValidationRegex(in []interface{}) contentful.FieldValidation {
+	if len(in) == 0 || in[0] == nil {
+		return contentful.FieldValidationRegex{}
+	}
+
+	validation := contnetful.FieldValidationRegex{}
+	m := in[0].(map[string]interface{})
+	if v, ok := m["pattern"].(string); ok {
+		if validation.Regex == nil {
+			validation.Regex = &contentful.Regex{}
+		}
+		validation.Regex.Pattern = v
+	}
+	if v, ok := m["flags"].(string); ok {
+		if validation.Regex == nil {
+			validation.Regex = &contentful.Regex{}
+		}
+		validation.Regex.Flags = v
+	}
+	if v, ok := m["err_message"].(string); ok {
+		validation.ErrMessage = v
+	}
+	return validation
+}
+
+func generateValidationSchema() *schema.Resource {
+	return &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"link": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+			"mime_type": &schema.Schema{
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+			"dimension": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"min_width": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Required: true,
+						},
+						"max_width": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Required: true,
+						},
+						"min_height": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Required: true,
+						},
+						"max_height": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Required: true,
+						},
+						"err_message": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
+			},
+			"size": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"min": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Optional: true,
+						},
+						"max": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Optional: true,
+						},
+						"err_message": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+			"file_size": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"min": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Optional: true,
+						},
+						"max": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Optional: true,
+						},
+						"err_message": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+			"unique": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+			"range": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"min": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Optional: true,
+						},
+						"max": &schema.Schema{
+							Type:     schema.TypeFloat,
+							Optional: true,
+						},
+						"err_message": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+			"date": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"min": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"max": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"err_message": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+			"regex": &schema.Schema{
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"pattern": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"flags": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"err_message": &schema.Schema{
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+					},
+				},
+			},
+		},
+	}
 }
