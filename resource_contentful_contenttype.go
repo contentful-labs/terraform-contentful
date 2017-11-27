@@ -18,10 +18,6 @@ func resourceContentfulContentType() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
-			"id": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
 			"version": &schema.Schema{
 				Type:     schema.TypeInt,
 				Computed: true,
