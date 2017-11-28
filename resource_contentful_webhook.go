@@ -13,10 +13,6 @@ func resourceContentfulWebhook() *schema.Resource {
 		Delete: resourceDeleteWebhook,
 
 		Schema: map[string]*schema.Schema{
-			"id": &schema.Schema{
-				Type:     schema.TypeString,
-				Computed: true,
-			},
 			"version": &schema.Schema{
 				Type:     schema.TypeInt,
 				Computed: true,
